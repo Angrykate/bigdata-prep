@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PostgreSQL distribué — bigdata-prep</title>
+<link rel="stylesheet" href="style.css">
+<style>:root{--accent:var(--pg);}</style>
+</head>
+<body data-mod="pg">
+<div class="node-field"></div>
+
+<header class="topbar">
+  <div class="wrap">
+    <div class="brand"><span class="dot" style="background:var(--pg)"></span>bigdata-prep</div>
+    <nav class="nav-links">
+      <a href="index.html">Accueil</a>
+      <a href="hadoop.html">Hadoop</a>
+      <a href="spark.html">Spark</a>
+      <a href="spark-extensions.html">Extensions</a>
+      <a href="postgres-distribue.html" class="active">Postgres&nbsp;distribué</a>
+      <a href="docker.html">Docker</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="page-hero">
+    <span class="chip pg">Module 04 · PostgreSQL distribué</span>
+    <h1 class="page-title" style="margin-top:14px;">PostgreSQL distribué</h1>
+    <p class="page-sub">Trois approches progressives pour distribuer une base relationnelle :
+    partitionnement local, distribution logique via FDW, et distribution réelle avec Citus.</p>
+  </section>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="t-fiches">📄 Fiches</button>
+    <button class="tab-btn" data-tab="t-flash">🃏 Flashcards</button>
+    <button class="tab-btn" data-tab="t-qcm">🎯 QCM</button>
+  </div>
+
+  <!-- ===================== FICHES ===================== -->
+  <div class="tab-panel active" id="t-fiches">
+
+    <div class="fiche-section">
+      <h2>Vue d'ensemble — les 3 approches</h2>
+      <div class="card-grid">
+        <div class="def-card wide">
+          <table class="fiche-table">
+            <tr><th>Approche</th><th>Où sont les données</th><th>Qui exécute</th><th>Limite principale</th></tr>
+            <tr><td><b>Partitionnement local</b></td><td>Un seul serveur, sous-tables physiques</td><td>PostgreSQL local</td><td>Pas de distribution réelle — toujours mono-serveur</td></tr>
+            <tr><td><b>FDW (Foreign Data Wrapper)</b></td><td>Serveurs distants (réseau)</td><td>Serveur central + serveurs distants</td><td>Requêtes toujours pilotées par le central — si un distant tombe, ses données sont inaccessibles</td></tr>
+            <tr><td><b>Citus</b></td><td>Fragmenté (shards) sur workers</td><td>Coordinateur + workers en parallèle</td><td>Extension PostgreSQL, requiert une installation spécifique</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="fiche-section">
+      <h2>Partie 1 — Partitionnement local</h2>
+      <div class="card-grid">
+        <div class="def-card wide">
+          <h4>Principe</h4>
+          <p>PostgreSQL divise une table en sous-tables physiques appelées <b>partitions</b>. Les données restent sur <b>un seul serveur</b>. Lors d'une requête filtrée sur la clé de partition, le planificateur n'interroge que la ou les partitions concernées : c'est le <b>partition pruning</b>.</p>
+        </div>
+        <div class="def-card">
+          <h4>Types de partitionnement</h4>
+          <ul>
+            <li><b>PARTITION BY LIST</b> : valeurs explicites (ex: pays)</li>
+            <li><b>PARTITION BY RANGE</b> : plages de valeurs (ex: dates)</li>
+            <li><b>PARTITION BY HASH</b> : répartition par hachage</li>
+          </ul>
+        </div>
+        <div class="def-card">
+          <h4>Partition DEFAULT</h4>
+          <p>Capture toutes les lignes dont la valeur ne correspond à aucune partition explicite. <b>Obligatoire</b> pour ne pas perdre de données lors des insertions.</p>
+        </div>
+        <div class="def-card wide">
+          <h4>Stratégie de migration (table existante → partitionnée)</h4>
+          <p>Une table standard ne peut pas être convertie directement. Procédure :</p>
+          <pre class="code-block"><span class="c">-- 1. Renommer l'ancienne table</span>
+<span class="k">ALTER TABLE</span> commandes <span class="k">RENAME TO</span> commandes_old;
+
+<span class="c">-- 2. Créer la nouvelle table partitionnée</span>
+<span class="k">CREATE TABLE</span> commandes (
+  commande_id INT,
+  client_id   INT,
+  statut      VARCHAR(20),
+  pays_client VARCHAR(50)
+) <span class="k">PARTITION BY LIST</span> (pays_client);
+
+<span class="c">-- 3. Créer les partitions</span>
+<span class="k">CREATE TABLE</span> commande_togo    <span class="k">PARTITION OF</span> commandes <span class="k">FOR VALUES IN</span> (<span class="s">'Togo'</span>);
+<span class="k">CREATE TABLE</span> commande_mali    <span class="k">PARTITION OF</span> commandes <span class="k">FOR VALUES IN</span> (<span class="s">'Mali'</span>);
+<span class="k">CREATE TABLE</span> commande_default <span class="k">PARTITION OF</span> commandes <span class="k">DEFAULT</span>;
+
+<span class="c">-- 4. Migrer les données</span>
+<span class="k">INSERT INTO</span> commandes (commande_id, client_id, statut, pays_client)
+<span class="k">SELECT</span> c.commande_id, c.client_id, c.statut, cl.pays
+<span class="k">FROM</span> commandes_old c
+<span class="k">JOIN</span> clients cl <span class="k">ON</span> cl.client_id = c.client_id;
+
+<span class="c">-- 5. Vérifier avec EXPLAIN ANALYZE</span>
+<span class="k">EXPLAIN ANALYZE SELECT</span> * <span class="k">FROM</span> commandes <span class="k">WHERE</span> pays_client = <span class="s">'Togo'</span>;</pre>
+        </div>
+        <div class="def-card wide">
+          <h4>Inspecter la hiérarchie des partitions</h4>
+          <pre class="code-block"><span class="c">-- Lister les tables (r=ordinaire, p=partitionnée, f=étrangère)</span>
+<span class="k">SELECT</span> relname, relkind <span class="k">FROM</span> pg_class
+<span class="k">WHERE</span> relkind <span class="k">IN</span> (<span class="s">'r'</span>, <span class="s">'f'</span>, <span class="s">'p'</span>) <span class="k">AND</span> relnamespace = 2200;
+
+<span class="c">-- Hiérarchie parent-enfant</span>
+<span class="k">SELECT</span> inhparent::regclass <span class="k">AS</span> parent, inhrelid::regclass <span class="k">AS</span> enfant
+<span class="k">FROM</span> pg_inherits;</pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="fiche-section">
+      <h2>Partie 2 — Foreign Data Wrapper (FDW)</h2>
+      <div class="card-grid">
+        <div class="def-card wide">
+          <h4>Principe</h4>
+          <p>FDW permet à une partition de résider <b>physiquement sur un serveur distant</b>, tout en restant interrogeable de façon transparente depuis le serveur central. Le serveur central reste le point d'entrée unique. Scénario du TP : données Togo → serveur Lomé (port 5433), données Mali → serveur Bamako (port 5434).</p>
+        </div>
+        <div class="def-card wide">
+          <h4>⚠️ Limite critique</h4>
+          <p>Si le serveur distant tombe en panne, les données qui y résident deviennent <b>totalement inaccessibles</b> depuis le serveur central. Les données des autres partitions (locales ou autres serveurs distants) restent disponibles.</p>
+        </div>
+        <div class="def-card wide">
+          <h4>Configuration FDW — 4 étapes</h4>
+          <pre class="code-block"><span class="c">-- Étape 1 : activer l'extension</span>
+<span class="k">CREATE EXTENSION IF NOT EXISTS</span> postgres_fdw;
+
+<span class="c">-- Étape 2 : déclarer le serveur distant</span>
+<span class="k">CREATE SERVER</span> server_lome
+  <span class="k">FOREIGN DATA WRAPPER</span> postgres_fdw
+  <span class="k">OPTIONS</span> (host <span class="s">'127.0.0.1'</span>, dbname <span class="s">'flowshop_lome'</span>, port <span class="s">'5433'</span>);
+
+<span class="c">-- Étape 3 : mapping utilisateur (authentification)</span>
+<span class="k">CREATE USER MAPPING FOR CURRENT_USER</span>
+  <span class="k">SERVER</span> server_lome
+  <span class="k">OPTIONS</span> (user <span class="s">'tt'</span>, password <span class="s">'admin'</span>);
+
+<span class="c">-- Étape 4 : créer la foreign table et l'attacher</span>
+<span class="k">CREATE FOREIGN TABLE</span> commande_togo (
+  commande_id INT, client_id INT,
+  statut VARCHAR(20), pays_client VARCHAR(50)
+) <span class="k">SERVER</span> server_lome <span class="k">OPTIONS</span> (table_name <span class="s">'commande_togo'</span>);
+
+<span class="k">ALTER TABLE</span> commandes
+  <span class="k">ATTACH PARTITION</span> commande_togo <span class="k">FOR VALUES IN</span> (<span class="s">'Togo'</span>);</pre>
+        </div>
+        <div class="def-card wide">
+          <h4>Migrer une partition vers un serveur distant</h4>
+          <pre class="code-block"><span class="c">-- Exporter la partition locale et l'importer sur le serveur distant</span>
+pg_dump -p 5432 -d flowshop_db -t commande_togo | psql -p 5433 -d flowshop_lome
+
+<span class="c">-- Détacher et supprimer la partition locale devenue inutile</span>
+<span class="k">ALTER TABLE</span> commandes <span class="k">DETACH PARTITION</span> commande_togo;
+<span class="k">DROP TABLE</span> commande_togo;</pre>
+        </div>
+        <div class="def-card">
+          <h4>Pourquoi co-localiser les données ?</h4>
+          <p>Dans le TP, <code>details_togo</code> est migré sur le même serveur que <code>commande_togo</code> (Lomé) pour éviter les <b>jointures distribuées coûteuses</b> : les jointures entre ces deux tables s'exécutent alors localement sur le serveur de Lomé.</p>
+        </div>
+        <div class="def-card">
+          <h4>Vérifier l'exécution distante</h4>
+          <pre class="code-block"><span class="k">EXPLAIN</span> (VERBOSE, COSTS OFF)
+<span class="k">SELECT</span> * <span class="k">FROM</span> details_commande
+<span class="k">WHERE</span> pays_client = <span class="s">'Togo'</span> <span class="k">LIMIT</span> 5;
+<span class="c">-- Le plan doit montrer "Foreign Scan on server_lome"</span></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="fiche-section">
+      <h2>Partie 3 — Citus</h2>
+      <div class="card-grid">
+        <div class="def-card wide">
+          <h4>Qu'est-ce que Citus ?</h4>
+          <p>Extension PostgreSQL qui transforme une instance en <b>base de données distribuée</b>. Contrairement à FDW où les requêtes sont exécutées sur le serveur central, Citus <b>parallélise les requêtes sur les workers</b>. Les workers stockent des fragments de données appelés <b>shards</b>.</p>
+        </div>
+        <div class="def-card">
+          <h4>Coordinateur</h4>
+          <p>Reçoit toutes les requêtes SQL. Les analyse, les planifie, les distribue aux workers appropriés, et agrège les résultats. C'est l'unique point d'entrée pour les clients.</p>
+        </div>
+        <div class="def-card">
+          <h4>Workers</h4>
+          <p>Stockent les fragments de données (shards). Exécutent les sous-requêtes que le coordinateur leur délègue. Communiquent entre eux via un réseau interne.</p>
+        </div>
+        <div class="def-card">
+          <h4>Shard</h4>
+          <p>Fragment horizontal d'une table distribuée, stocké sur un worker. Le coordinateur sait quel worker possède quel shard grâce aux métadonnées de distribution.</p>
+        </div>
+        <div class="def-card wide">
+          <h4>Types de tables Citus</h4>
+          <table class="fiche-table">
+            <tr><th>Type</th><th>Description</th><th>Cas d'usage</th></tr>
+            <tr><td><b>Distributed table</b></td><td>Fragmentée horizontalement sur les workers selon une colonne de distribution</td><td>Grandes tables de faits (commandes, transactions)</td></tr>
+            <tr><td><b>Reference table</b></td><td>Répliquée intégralement sur chaque worker</td><td>Petites tables de référence (pays, catégories) pour les jointures locales</td></tr>
+            <tr><td><b>Local table</b></td><td>Stockée uniquement sur le coordinateur</td><td>Tables de configuration, métadonnées Citus</td></tr>
+          </table>
+        </div>
+        <div class="def-card wide">
+          <h4>Mise en place d'une table distribuée</h4>
+          <pre class="code-block"><span class="c">-- Sur le coordinateur : activer Citus</span>
+<span class="k">CREATE EXTENSION</span> citus;
+
+<span class="c">-- Enregistrer les workers</span>
+<span class="k">SELECT</span> citus_add_node(<span class="s">'worker1'</span>, 5432);
+<span class="k">SELECT</span> citus_add_node(<span class="s">'worker2'</span>, 5432);
+
+<span class="c">-- Créer la table normalement</span>
+<span class="k">CREATE TABLE</span> commandes (
+  commande_id BIGINT, client_id INT,
+  date_commande TIMESTAMP, montant DECIMAL
+);
+
+<span class="c">-- La distribuer sur les workers (32 shards par défaut)</span>
+<span class="k">SELECT</span> create_distributed_table(<span class="s">'commandes'</span>, <span class="s">'client_id'</span>);
+
+<span class="c">-- Créer une reference table (répliquée partout)</span>
+<span class="k">SELECT</span> create_reference_table(<span class="s">'pays'</span>);</pre>
+        </div>
+        <div class="def-card">
+          <h4>Colocation</h4>
+          <p>Deux tables distribuées sur la même colonne sont <b>colocalisées</b> : leurs shards correspondants sont sur le même worker. Les jointures entre ces tables s'exécutent localement sur chaque worker, sans transfert réseau.</p>
+        </div>
+        <div class="def-card">
+          <h4>Docker dans le contexte Citus</h4>
+          <p>Le TP utilise Docker Compose pour simuler le cluster Citus : un conteneur coordinateur et N conteneurs workers, sur un réseau interne Docker. Chaque conteneur se voit par son nom (ex: <code>coordinator</code>, <code>worker1</code>).</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="fiche-section">
+      <h2>Comparatif synthétique</h2>
+      <div class="card-grid">
+        <div class="def-card wide">
+          <table class="fiche-table">
+            <tr><th>Critère</th><th>Partitionnement</th><th>FDW</th><th>Citus</th></tr>
+            <tr><td>Localisation données</td><td>Un seul serveur</td><td>Serveurs distants</td><td>Workers distribués</td></tr>
+            <tr><td>Exécution requêtes</td><td>Locale</td><td>Centrale (+ pushdown partiel)</td><td>Parallèle sur les workers</td></tr>
+            <tr><td>Scalabilité</td><td>Nulle (vertical)</td><td>Faible</td><td>Forte (horizontal)</td></tr>
+            <tr><td>Tolérance aux pannes</td><td>Non</td><td>Non (partition inaccessible)</td><td>Configurable (réplication)</td></tr>
+            <tr><td>Complexité</td><td>Faible</td><td>Moyenne</td><td>Élevée</td></tr>
+            <tr><td>Standard SQL</td><td>Oui</td><td>Oui</td><td>Oui (PostgreSQL)</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===================== FLASHCARDS ===================== -->
+  <div class="tab-panel" id="t-flash">
+    <div class="fc-toolbar">
+      <span class="fc-progress" id="fc-progress">Carte 1 sur 1</span>
+      <button class="fc-btn" id="fc-shuffle">🔀 Mélanger</button>
+    </div>
+    <div class="fc-stage" id="fc-stage"></div>
+    <div class="fc-nav" style="justify-content:center;margin-top:18px;">
+      <button class="fc-btn" id="fc-prev">← Précédent</button>
+      <span class="count" id="fc-count">1 / 1</span>
+      <button class="fc-btn" id="fc-next">Suivant →</button>
+    </div>
+  </div>
+
+  <!-- ===================== QCM ===================== -->
+  <div class="tab-panel" id="t-qcm">
+    <div id="qcm-root"></div>
+  </div>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>bigdata-prep · Module 04 — PostgreSQL distribué</p>
+    <p><a href="index.html">← Retour à l'accueil</a></p>
+  </div>
+</footer>
+
+<script>
+window.QCM_ACCENT = '#4fd1c5';
+
+window.FLASHCARDS = [
+  {tag:'pg', tagLabel:'Partitionnement', q:"Qu'est-ce que le partition pruning et quel avantage procure-t-il ?", a:"Lorsqu'une requête filtre sur la clé de partition, PostgreSQL n'interroge que la ou les partitions concernées (pruning = élagage). Les autres partitions sont ignorées, ce qui réduit drastiquement le nombre de lignes parcourues et améliore les performances."},
+  {tag:'pg', tagLabel:'Partitionnement', q:"Pourquoi une table standard PostgreSQL ne peut-elle pas être convertie directement en table partitionnée ? Quelle est la stratégie ?", a:"PostgreSQL ne permet pas de modifier le type d'une table existante. La stratégie est : (1) renommer l'ancienne table (RENAME TO), (2) créer une nouvelle table partitionnée avec le même nom, (3) migrer les données via INSERT INTO ... SELECT avec une jointure pour récupérer la clé de partition, (4) supprimer l'ancienne table."},
+  {tag:'pg', tagLabel:'Partitionnement', q:"À quoi sert la partition DEFAULT et est-elle obligatoire ?", a:"Elle capture toutes les lignes dont la valeur de la clé de partition ne correspond à aucune partition explicite. Elle n'est pas techniquement obligatoire mais est fortement recommandée : sans elle, toute insertion d'une valeur non couverte provoque une erreur et entraîne une perte de données."},
+  {tag:'pg', tagLabel:'FDW', q:"Décrivez les 4 étapes pour configurer un Foreign Data Wrapper avec postgres_fdw.", a:"1. CREATE EXTENSION IF NOT EXISTS postgres_fdw (activer l'extension). 2. CREATE SERVER ... FOREIGN DATA WRAPPER postgres_fdw OPTIONS (host, dbname, port) (déclarer le serveur distant). 3. CREATE USER MAPPING FOR CURRENT_USER SERVER ... OPTIONS (user, password) (mapping d'authentification). 4. CREATE FOREIGN TABLE ... SERVER ... et ALTER TABLE ... ATTACH PARTITION ... FOR VALUES IN (créer la foreign table et l'attacher à la table partitionnée)."},
+  {tag:'pg', tagLabel:'FDW', q:"Quelle est la limite principale de FDW en termes de tolérance aux pannes ?", a:"Si le serveur distant tombe en panne, les données de la partition qui y résident sont totalement inaccessibles depuis le serveur central. Les requêtes ciblant ces données échouent. Les partitions hébergées sur d'autres serveurs (locaux ou autres serveurs distants) restent accessibles."},
+  {tag:'pg', tagLabel:'FDW', q:"Pourquoi a-t-on migré details_togo sur le même serveur que commande_togo dans le TP ?", a:"Pour éviter les jointures distribuées coûteuses : si les deux tables sont sur des serveurs différents, le serveur central doit récupérer les données de chaque serveur distant pour effectuer la jointure, générant un transfert réseau important. En les co-localisant sur le même serveur (Lomé), la jointure entre commande_togo et details_togo s'exécute localement sur server_lome."},
+  {tag:'pg', tagLabel:'Citus', q:"En quoi Citus va-t-il plus loin que FDW ?", a:"FDW distribue les données mais les requêtes sont pilotées et en grande partie exécutées par le serveur central. Citus distribue à la fois les données ET l'exécution : le coordinateur envoie des sous-requêtes aux workers qui les traitent en parallèle. Les résultats sont agrégés par le coordinateur — le traitement est réellement parallèle."},
+  {tag:'pg', tagLabel:'Citus', q:"Différenciez distributed table et reference table dans Citus.", a:"Distributed table : fragmentée horizontalement sur les workers selon une colonne de distribution (ex: client_id). Chaque shard ne contient qu'une partie des données. Utilisée pour les grandes tables de faits. Reference table : répliquée intégralement sur chaque worker. Utilisée pour les petites tables de référence (pays, catégories) pour permettre des jointures locales sans transfert réseau."},
+  {tag:'pg', tagLabel:'Citus', q:"Qu'est-ce que la colocation dans Citus et pourquoi est-ce important ?", a:"Deux tables distribuées sur la même colonne sont colocalisées si leurs shards correspondants sont placés sur les mêmes workers. Importance : les jointures entre ces tables peuvent s'exécuter localement sur chaque worker sans transfert de données entre nœuds, ce qui optimise drastiquement les performances."},
+  {tag:'pg', tagLabel:'Citus', q:"Quelle commande SQL crée une table distribuée dans Citus et que signifie la colonne de distribution ?", a:"SELECT create_distributed_table('nom_table', 'colonne_distribution'). La colonne de distribution détermine comment les lignes sont réparties sur les shards/workers : toutes les lignes avec la même valeur de cette colonne se retrouvent dans le même shard. Choisir la bonne colonne est crucial pour éviter les déséquilibres et optimiser les jointures."},
+  {tag:'pg', tagLabel:'Comparatif', q:"Comparez les 3 approches (Partitionnement, FDW, Citus) sur la scalabilité et la tolérance aux pannes.", a:"Partitionnement : pas de scalabilité réelle (mono-serveur), pas de tolérance aux pannes. FDW : scalabilité faible (les requêtes restent centralisées), pas de tolérance aux pannes (partition inaccessible si serveur distant tombe). Citus : forte scalabilité horizontale (ajout de workers), tolérance aux pannes configurable via la réplication des shards."},
+];
+
+window.QCM = [
+  {type:'single', q:"Dans pg_class, quelle valeur de relkind indique une foreign table (table étrangère) ?", opts:["r","p","f","t"], correct:[2], explain:"Dans pg_class : r = table ordinaire, p = table partitionnée, f = foreign table (table étrangère créée via FDW). Cette distinction est utile pour inspecter la structure d'un schéma et savoir quelles tables sont locales ou distantes.", theme:"FDW"},
+  {type:'tf', q:"Le partitionnement PostgreSQL distribue les données sur plusieurs serveurs.", opts:["Vrai","Faux"], correct:[1], explain:"Faux. Le partitionnement est une optimisation locale : les données restent sur un seul serveur mais sont divisées en sous-tables physiques (partitions). La distribution sur plusieurs serveurs nécessite FDW ou Citus.", theme:"Partitionnement"},
+  {type:'single', q:"Quelle commande SQL attache une partition (ou foreign table) à une table partitionnée ?", opts:["CREATE PARTITION","ALTER TABLE ... ATTACH PARTITION ... FOR VALUES IN","INSERT INTO PARTITION","ALTER TABLE ... ADD PARTITION"], correct:[1], explain:"ALTER TABLE parent ATTACH PARTITION enfant FOR VALUES IN ('valeur') rattache une table existante (locale ou foreign table) comme partition d'une table partitionnée.", theme:"Partitionnement / FDW"},
+  {type:'multi', q:"Parmi ces étapes, lesquelles sont nécessaires pour configurer un FDW avec postgres_fdw ?", opts:["CREATE EXTENSION postgres_fdw","CREATE DATABASE sur le serveur central","CREATE SERVER avec les options host/dbname/port","CREATE USER MAPPING pour l'authentification"], correct:[0,2,3], explain:"Les 3 étapes obligatoires sont : activer l'extension postgres_fdw, déclarer le serveur distant avec CREATE SERVER, et créer le mapping utilisateur avec CREATE USER MAPPING. CREATE DATABASE n'est pas une étape FDW côté serveur central.", theme:"FDW"},
+  {type:'tf', q:"Si le serveur distant tombe en panne dans une architecture FDW, toutes les données (locales et distantes) deviennent inaccessibles.", opts:["Vrai","Faux"], correct:[1], explain:"Faux. Seules les données de la partition hébergée sur le serveur distant défaillant deviennent inaccessibles. Les partitions locales et celles sur d'autres serveurs distants fonctionnels restent accessibles.", theme:"FDW"},
+  {type:'single', q:"Dans Citus, quel composant reçoit les requêtes SQL des clients et les distribue aux workers ?", opts:["Le shard","Le worker","Le coordinateur","Le JournalNode"], correct:[2], explain:"Le coordinateur est l'unique point d'entrée pour les clients. Il reçoit les requêtes SQL, les analyse, génère des sous-requêtes pour les workers concernés, puis agrège les résultats. Les clients ne communiquent jamais directement avec les workers.", theme:"Citus"},
+  {type:'single', q:"Quelle fonction Citus crée une distributed table ?", opts:["citus_distribute('table', 'col')","create_distributed_table('table', 'col')","partition_table('table', 'col')","citus_add_table('table', 'col')"], correct:[1], explain:"SELECT create_distributed_table('nom_table', 'colonne_distribution') fragmentera la table sur les workers selon la colonne choisie. La colonne de distribution est cruciale pour les performances des jointures.", theme:"Citus"},
+  {type:'multi', q:"Parmi ces affirmations sur Citus, lesquelles sont correctes ?", opts:["Une reference table est répliquée sur chaque worker","Les workers exécutent des sous-requêtes en parallèle","Citus remplace complètement PostgreSQL par un nouveau SGBD","La colocation permet des jointures locales entre tables distribuées"], correct:[0,1,3], explain:"Citus est une extension de PostgreSQL, il ne le remplace pas — le langage SQL, les fonctionnalités et l'écosystème PostgreSQL restent intacts. Les trois autres affirmations sont correctes.", theme:"Citus"},
+  {type:'single', q:"Quelle commande bash permet de migrer une partition locale vers un serveur PostgreSQL distant ?", opts:["psql --copy","pg_dump -t table | psql -p port -d base","COPY TO REMOTE","ALTER TABLE ... MOVE TO SERVER"], correct:[1], explain:"Le pipe pg_dump | psql est la méthode standard : pg_dump exporte la structure et les données d'une table, et psql les importe directement dans la base distante. Exemple : pg_dump -p 5432 -d db -t commande_togo | psql -p 5433 -d flowshop_lome", theme:"FDW — Migration"},
+  {type:'tf', q:"EXPLAIN ANALYZE exécute réellement la requête et affiche les temps mesurés.", opts:["Vrai","Faux"], correct:[0], explain:"Vrai. Contrairement à EXPLAIN seul qui affiche seulement le plan estimé sans exécuter, EXPLAIN ANALYZE exécute la requête et affiche le plan réel avec les temps d'exécution mesurés et le nombre de lignes réellement traité.", theme:"Outils"},
+  {type:'single', q:"Pourquoi co-localise-t-on details_togo avec commande_togo sur le même serveur FDW ?", opts:["Pour économiser de l'espace disque","Pour éviter les jointures distribuées coûteuses — les jointures s'exécutent localement sur le serveur distant","Pour simplifier la configuration du FDW","Pour respecter les contraintes de clés étrangères"], correct:[1], explain:"Si les deux tables sont sur des serveurs différents, chaque jointure nécessite un transfert réseau des données depuis chaque serveur vers le central. En les co-localisant, la jointure s'exécute localement sur server_lome, sans transfert réseau.", theme:"FDW — Optimisation"},
+  {type:'single', q:"Quelle partition de type LIST capture les valeurs non prévues par les autres partitions ?", opts:["La partition CATCH","La partition DEFAULT","La partition OVERFLOW","Il n'existe pas de tel mécanisme"], correct:[1], explain:"PARTITION OF table DEFAULT capture toutes les lignes dont la valeur de la clé de partition ne correspond à aucune partition explicite. Sans elle, l'insertion d'une valeur non couverte échoue avec une erreur.", theme:"Partitionnement"},
+];
+</script>
+<script src="app.js"></script>
+</body>
+</html>

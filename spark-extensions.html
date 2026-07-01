@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Extensions Spark — bigdata-prep</title>
+<link rel="stylesheet" href="style.css">
+<style>:root{--accent:var(--ext);}</style>
+</head>
+<body data-mod="ext">
+<div class="node-field"></div>
+
+<header class="topbar">
+  <div class="wrap">
+    <div class="brand"><span class="dot" style="background:var(--ext)"></span>bigdata-prep</div>
+    <nav class="nav-links">
+      <a href="index.html">Accueil</a>
+      <a href="hadoop.html">Hadoop</a>
+      <a href="spark.html">Spark</a>
+      <a href="spark-extensions.html" class="active">Extensions</a>
+      <a href="postgres-distribue.html">Postgres&nbsp;distribué</a>
+      <a href="docker.html">Docker</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="page-hero">
+    <span class="chip ext">Module 03 · Extensions</span>
+    <h1 class="page-title" style="margin-top:14px;">Extensions Spark &amp; Pig</h1>
+    <p class="page-sub">Spark ML pour le machine learning distribué à grande échelle,
+    et Apache Pig pour les transformations ETL via un langage de script de haut niveau (Pig Latin).</p>
+  </section>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="t-fiches">📄 Fiches</button>
+    <button class="tab-btn" data-tab="t-flash">🃏 Flashcards</button>
+    <button class="tab-btn" data-tab="t-qcm">🎯 QCM</button>
+  </div>
+
+  <!-- ===================== FICHES ===================== -->
+  <div class="tab-panel active" id="t-fiches">
+
+    <!-- ──────────────── SPARK ML ──────────────── -->
+    <div class="fiche-section">
+      <h2>Spark ML — Machine Learning distribué</h2>
+      <p class="desc">La bibliothèque MLlib de Spark fournit des algorithmes ML qui s'exécutent en parallèle sur un cluster.</p>
+      <div class="card-grid">
+        <div class="def-card wide">
+          <h4>Spark ML vs scikit-learn — pourquoi choisir Spark ML ?</h4>
+          <table class="fiche-table">
+            <tr><th>Critère</th><th>scikit-learn</th><th>Spark ML</th></tr>
+            <tr><td>Exécution</td><td>Machine unique (single-node)</td><td>Cluster distribué (multi-nœuds)</td></tr>
+            <tr><td>Volume de données</td><td>Limité par la RAM d'une machine</td><td>Pétaoctets — données sur HDFS/S3</td></tr>
+            <tr><td>Vitesse d'entraînement</td><td>Lente sur gros volumes</td><td>Parallélisée sur les executors</td></tr>
+            <tr><td>API</td><td>fit() / predict() Python</td><td>fit() / transform() sur DataFrames</td></tr>
+            <tr><td>Cas d'usage</td><td>Prototypage, petits jeux de données</td><td>Production, Big Data</td></tr>
+          </table>
+          <div class="warn-box" style="margin-top:14px;">
+            <span>💡</span>
+            <span><b>À retenir :</b> recommandez Spark ML à un ami dès que les données ne tiennent plus en RAM sur une seule machine, ou que le temps d'entraînement devient prohibitif.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fiche-section">
+      <h2>Concepts fondamentaux de Spark ML</h2>
+      <div class="card-grid">
+        <div class="def-card">
+          <h4>Transformer</h4>
+          <p>Objet qui <b>transforme</b> un DataFrame en un autre via la méthode <code>transform()</code>. Ne s'entraîne pas — applique une règle déjà définie.</p>
+          <p style="margin-top:8px;font-size:13px;color:var(--text-faint);">Ex : VectorAssembler, StringIndexer, StandardScaler, un modèle déjà entraîné (Model).</p>
+        </div>
+        <div class="def-card">
+          <h4>Estimator</h4>
+          <p>Objet qui <b>s'entraîne</b> sur un DataFrame via la méthode <code>fit()</code> et produit un <b>Transformer</b> (le modèle entraîné).</p>
+          <p style="margin-top:8px;font-size:13px;color:var(--text-faint);">Ex : LogisticRegression, RandomForest, KMeans, LinearRegression.</p>
+        </div>
+        <div class="def-card">
+          <h4>Pipeline</h4>
+          <p>Chaîne ordonnée de Transformers et d'Estimators. Simplifie la gestion du workflow ML : prétraitement + entraînement en une seule commande <code>fit()</code>.</p>
+          <p style="margin-top:8px;font-size:13px;color:var(--text-faint);">Reproducible, testable, et facilement réutilisable.</p>
+        </div>
+        <div class="def-card">
+          <h4>VectorAssembler</h4>
+          <p>Transformer incontournable : assemble plusieurs colonnes numériques en un seul vecteur dense <code>features</code>, format attendu par les algorithmes Spark ML.</p>
+        </div>
+        <div class="def-card">
+          <h4>ParamGrid &amp; CrossValidator</h4>
+          <p>Permettent le réglage des hyperparamètres : ParamGrid définit la grille de valeurs à tester, CrossValidator évalue chaque combinaison par validation croisée.</p>
+        </div>
+        <div class="def-card">
+          <h4>Évaluateurs</h4>
+          <p>Mesurent la qualité du modèle sur des données de test.</p>
+          <div class="badge-row">
+            <span class="mini-badge">BinaryClassificationEvaluator</span>
+            <span class="mini-badge">MulticlassClassificationEvaluator</span>
+            <span class="mini-badge">RegressionEvaluator</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fiche-section">
+      <h2>Pipeline Spark ML — exemple complet</h2>
+      <div class="card-grid">
+        <div class="def-card wide">
+          <h4>Workflow type d'un TP Spark ML</h4>
+          <pre class="code-block"><span class="k">from</span> pyspark.ml <span class="k">import</span> Pipeline
+<span class="k">from</span> pyspark.ml.feature <span class="k">import</span> VectorAssembler, StringIndexer, StandardScaler
+<span class="k">from</span> pyspark.ml.classification <span class="k">import</span> LogisticRegression
+<span class="k">from</span> pyspark.ml.evaluation <span class="k">import</span> BinaryClassificationEvaluator
+
+<span class="c"># 1. Charger les données</span>
+df = spark.read.option(<span class="s">"header"</span>, <span class="k">True</span>).option(<span class="s">"inferSchema"</span>, <span class="k">True</span>).csv(<span class="s">"data.csv"</span>)
+train, test = df.randomSplit([<span class="f">0.8</span>, <span class="f">0.2</span>], seed=<span class="f">42</span>)
+
+<span class="c"># 2. Encoder la colonne cible (label)</span>
+indexer = StringIndexer(inputCol=<span class="s">"categorie"</span>, outputCol=<span class="s">"label"</span>)
+
+<span class="c"># 3. Assembler les features en un vecteur</span>
+assembler = VectorAssembler(
+  inputCols=[<span class="s">"age"</span>, <span class="s">"revenu"</span>, <span class="s">"score"</span>],
+  outputCol=<span class="s">"features_raw"</span>
+)
+
+<span class="c"># 4. Normaliser</span>
+scaler = StandardScaler(inputCol=<span class="s">"features_raw"</span>, outputCol=<span class="s">"features"</span>)
+
+<span class="c"># 5. Modèle</span>
+lr = LogisticRegression(featuresCol=<span class="s">"features"</span>, labelCol=<span class="s">"label"</span>)
+
+<span class="c"># 6. Pipeline : tout assembler</span>
+pipeline = Pipeline(stages=[indexer, assembler, scaler, lr])
+
+<span class="c"># 7. Entraîner (un seul fit() fait tout)</span>
+model = pipeline.fit(train)
+
+<span class="c"># 8. Évaluer</span>
+predictions = model.transform(test)
+evaluator = BinaryClassificationEvaluator(labelCol=<span class="s">"label"</span>)
+auc = evaluator.evaluate(predictions)
+print(<span class="s">f"AUC : {auc:.3f}"</span>)</pre>
+        </div>
+        <div class="def-card wide">
+          <h4>Ordre d'exécution dans le Pipeline</h4>
+          <p>Lors du <code>fit()</code> sur les données d'entraînement :</p>
+          <p style="color:var(--text-dim);font-size:14px;">StringIndexer.fit() → VectorAssembler.transform() → StandardScaler.fit() → LogisticRegression.fit()</p>
+          <p style="margin-top:10px;">Lors du <code>transform()</code> sur les données de test :</p>
+          <p style="color:var(--text-dim);font-size:14px;">Chaque étape applique ses paramètres appris sur les nouvelles données, sans ré-entraînement.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ──────────────── APACHE PIG ──────────────── -->
+    <div class="fiche-section">
+      <h2>Apache Pig</h2>
+      <p class="desc">Outil de l'écosystème Hadoop pour les transformations ETL, via un langage de script de haut niveau : Pig Latin.</p>
+      <div class="card-grid">
+        <div class="def-card wide">
+          <h4>Qu'est-ce qu'Apache Pig ?</h4>
+          <p>Plateforme de haut niveau pour le traitement de données volumineuses sur Hadoop. Pig Latin est un langage de flux de données (<i>dataflow language</i>) qui compile en jobs MapReduce. Développé par Yahoo!, maintenant Apache.</p>
+          <div class="badge-row">
+            <span class="mini-badge">Orienté ETL</span>
+            <span class="mini-badge">Compile en MapReduce</span>
+            <span class="mini-badge">Pas de SQL</span>
+            <span class="mini-badge">Schéma flexible</span>
+          </div>
+        </div>
+        <div class="def-card">
+          <h4>Pig vs Hive</h4>
+          <table class="fiche-table">
+            <tr><th></th><th>Pig</th><th>Hive</th></tr>
+            <tr><td>Langage</td><td>Pig Latin (script)</td><td>HiveQL (SQL)</td></tr>
+            <tr><td>Public</td><td>Développeurs / ETL</td><td>Analystes SQL</td></tr>
+            <tr><td>Schéma</td><td>Facultatif</td><td>Obligatoire</td></tr>
+            <tr><td>Cas d'usage</td><td>Transformation complexe</td><td>Analyse / reporting</td></tr>
+          </table>
+        </div>
+        <div class="def-card">
+          <h4>Modes d'exécution</h4>
+          <ul>
+            <li><b>Local mode</b> : sur une seule machine, sans Hadoop (développement)</li>
+            <li><b>MapReduce mode</b> : sur un cluster Hadoop (production)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="fiche-section">
+      <h2>Pig Latin — instructions fondamentales</h2>
+      <div class="card-grid">
+        <div class="def-card wide">
+          <h4>Les commandes clés</h4>
+          <table class="fiche-table">
+            <tr><th>Commande</th><th>Rôle</th></tr>
+            <tr><td><code>LOAD</code></td><td>Charger des données depuis HDFS ou le système local</td></tr>
+            <tr><td><code>STORE</code></td><td>Sauvegarder le résultat dans HDFS</td></tr>
+            <tr><td><code>DUMP</code></td><td>Afficher le résultat à l'écran (debug)</td></tr>
+            <tr><td><code>FILTER</code></td><td>Sélectionner des lignes selon une condition (WHERE)</td></tr>
+            <tr><td><code>FOREACH ... GENERATE</code></td><td>Projeter/transformer des colonnes (SELECT)</td></tr>
+            <tr><td><code>GROUP</code></td><td>Regrouper les données par clé (GROUP BY)</td></tr>
+            <tr><td><code>ORDER</code></td><td>Trier les données</td></tr>
+            <tr><td><code>JOIN</code></td><td>Joindre deux relations</td></tr>
+            <tr><td><code>DISTINCT</code></td><td>Supprimer les doublons</td></tr>
+            <tr><td><code>LIMIT</code></td><td>Limiter le nombre de tuples retournés</td></tr>
+          </table>
+        </div>
+        <div class="def-card wide">
+          <h4>Exemple — WordCount en Pig Latin</h4>
+          <pre class="code-block"><span class="c">-- Charger les données texte</span>
+lignes = <span class="k">LOAD</span> <span class="s">'hdfs://data/texte.txt'</span> <span class="k">AS</span> (ligne:chararray);
+
+<span class="c">-- Découper chaque ligne en mots</span>
+mots = <span class="k">FOREACH</span> lignes <span class="k">GENERATE</span> FLATTEN(TOKENIZE(ligne)) <span class="k">AS</span> mot;
+
+<span class="c">-- Grouper par mot</span>
+groupes = <span class="k">GROUP</span> mots <span class="k">BY</span> mot;
+
+<span class="c">-- Compter les occurrences</span>
+comptage = <span class="k">FOREACH</span> groupes <span class="k">GENERATE</span> group <span class="k">AS</span> mot, COUNT(mots) <span class="k">AS</span> nb;
+
+<span class="c">-- Trier par fréquence décroissante</span>
+resultat = <span class="k">ORDER</span> comptage <span class="k">BY</span> nb <span class="k">DESC</span>;
+
+<span class="c">-- Sauvegarder</span>
+<span class="k">STORE</span> resultat <span class="k">INTO</span> <span class="s">'hdfs://output/wordcount'</span>;</pre>
+        </div>
+        <div class="def-card wide">
+          <h4>Exemple — Filtrage et agrégation</h4>
+          <pre class="code-block"><span class="c">-- Charger un CSV avec schéma</span>
+ventes = <span class="k">LOAD</span> <span class="s">'hdfs://data/ventes.csv'</span>
+         <span class="k">USING</span> PigStorage(<span class="s">','</span>)
+         <span class="k">AS</span> (produit:chararray, region:chararray, montant:float);
+
+<span class="c">-- Filtrer sur une région</span>
+ventes_nord = <span class="k">FILTER</span> ventes <span class="k">BY</span> region == <span class="s">'Nord'</span>;
+
+<span class="c">-- Grouper par produit</span>
+par_produit = <span class="k">GROUP</span> ventes_nord <span class="k">BY</span> produit;
+
+<span class="c">-- Calculer le CA total</span>
+ca_produit = <span class="k">FOREACH</span> par_produit <span class="k">GENERATE</span>
+             group <span class="k">AS</span> produit,
+             SUM(ventes_nord.montant) <span class="k">AS</span> ca_total;
+
+<span class="c">-- Afficher (debug)</span>
+<span class="k">DUMP</span> ca_produit;</pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="fiche-section">
+      <h2>Pig — points importants à retenir</h2>
+      <div class="card-grid">
+        <div class="def-card">
+          <h4>Lazy evaluation</h4>
+          <p>Pig est également lazy : les transformations ne s'exécutent que lorsqu'une commande <code>DUMP</code> ou <code>STORE</code> est appelée.</p>
+        </div>
+        <div class="def-card">
+          <h4>UDF (User-Defined Functions)</h4>
+          <p>Pig permet d'écrire des fonctions personnalisées en Java, Python ou JavaScript pour des transformations non couvertes par les fonctions intégrées.</p>
+        </div>
+        <div class="def-card">
+          <h4>FLATTEN</h4>
+          <p>Décompresse une structure imbriquée (bag ou tuple) en lignes séparées. Indispensable après TOKENIZE ou GROUP pour travailler sur des éléments individuels.</p>
+        </div>
+        <div class="def-card">
+          <h4>Utilisation aujourd'hui</h4>
+          <p>Pig est progressivement remplacé par Spark (plus rapide, en mémoire) et Hive (plus accessible). Il reste présent dans les pipelines ETL legacy dans les grandes entreprises.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===================== FLASHCARDS ===================== -->
+  <div class="tab-panel" id="t-flash">
+    <div class="fc-toolbar">
+      <span class="fc-progress" id="fc-progress">Carte 1 sur 1</span>
+      <button class="fc-btn" id="fc-shuffle">🔀 Mélanger</button>
+    </div>
+    <div class="fc-stage" id="fc-stage"></div>
+    <div class="fc-nav" style="justify-content:center;margin-top:18px;">
+      <button class="fc-btn" id="fc-prev">← Précédent</button>
+      <span class="count" id="fc-count">1 / 1</span>
+      <button class="fc-btn" id="fc-next">Suivant →</button>
+    </div>
+  </div>
+
+  <!-- ===================== QCM ===================== -->
+  <div class="tab-panel" id="t-qcm">
+    <div id="qcm-root"></div>
+  </div>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>bigdata-prep · Module 03 — Extensions Spark &amp; Pig</p>
+    <p><a href="index.html">← Retour à l'accueil</a></p>
+  </div>
+</footer>
+
+<script>
+window.QCM_ACCENT = '#f0598c';
+
+window.FLASHCARDS = [
+  {tag:'ext', tagLabel:'Spark ML', q:"Un ami utilise scikit-learn et son entraînement prend 8h. Que lui recommandez-vous et pourquoi ?", a:"Spark ML (MLlib) : contrairement à scikit-learn qui s'exécute sur une seule machine, Spark distribue l'entraînement sur un cluster. Les données sont chargées depuis HDFS ou S3, traitées en parallèle sur de nombreux executors — ce qui permet de traiter des volumes bien plus grands et de réduire drastiquement le temps d'entraînement."},
+  {tag:'ext', tagLabel:'Spark ML', q:"Quelle est la différence entre un Transformer et un Estimator dans Spark ML ?", a:"Un Estimator s'entraîne sur des données via fit() et produit un Transformer (le modèle). Un Transformer applique une règle déjà définie via transform() sans entraînement. Exemples : LogisticRegression est un Estimator, le modèle entraîné LogisticRegressionModel est un Transformer. VectorAssembler est un Transformer (pas d'entraînement)."},
+  {tag:'ext', tagLabel:'Spark ML', q:"À quoi sert VectorAssembler dans un pipeline Spark ML ?", a:"VectorAssembler est un Transformer qui assemble plusieurs colonnes numériques en un seul vecteur dense dans une colonne 'features'. C'est une étape obligatoire car tous les algorithmes Spark ML attendent leurs données d'entrée sous forme d'un unique vecteur dense."},
+  {tag:'ext', tagLabel:'Spark ML', q:"Décrivez l'intérêt d'utiliser un Pipeline Spark ML.", a:"Un Pipeline enchaîne des Transformers et des Estimators dans un ordre défini. Avantages : un seul appel fit() entraîne toute la chaîne (prétraitement + modèle), le modèle final est reproductible et facilement sérialisable, il évite les fuites de données entre train et test car tout est géré ensemble."},
+  {tag:'ext', tagLabel:'Spark ML', q:"Quels sont les 3 façons de définir un schéma dans Spark ? (rappel TP)", a:"1. inferSchema=True : automatique mais lent et peu fiable. 2. StructType avec StructField : précis et recommandé en production. 3. DDL string comme 'id INT, nom STRING' : concis et lisible. En production, préférer 2 ou 3."},
+  {tag:'ext', tagLabel:'Pig', q:"Qu'est-ce qu'Apache Pig et en quoi se distingue-t-il de Hive ?", a:"Pig est une plateforme ETL de haut niveau dont le langage (Pig Latin) compile en jobs MapReduce. Il s'adresse aux développeurs pour des transformations complexes, avec un schéma facultatif. Hive utilise HiveQL (SQL), s'adresse aux analystes, avec un schéma obligatoire et un focus sur le reporting."},
+  {tag:'ext', tagLabel:'Pig', q:"Expliquez le comportement lazy d'Apache Pig.", a:"Comme Spark, Pig est lazy : les instructions LOAD, FILTER, FOREACH, GROUP ne déclenchent aucun calcul immédiat. L'exécution (compilation en MapReduce) n'est déclenchée que par DUMP (affichage à l'écran) ou STORE (écriture dans HDFS)."},
+  {tag:'ext', tagLabel:'Pig', q:"À quoi sert la commande FLATTEN en Pig Latin ?", a:"FLATTEN décompresse une structure imbriquée (bag ou tuple) en lignes individuelles. Elle est indispensable après TOKENIZE (qui retourne un bag de mots) ou après GROUP (qui retourne des bags de tuples) pour travailler sur chaque élément séparément."},
+  {tag:'ext', tagLabel:'Pig', q:"Décrivez les 4 étapes d'un WordCount en Pig Latin.", a:"1. LOAD : charger le fichier texte depuis HDFS. 2. FOREACH + FLATTEN(TOKENIZE()) : découper chaque ligne en mots individuels. 3. GROUP BY : regrouper les mots identiques ensemble. 4. FOREACH + COUNT() : compter les occurrences de chaque groupe, puis STORE pour écrire le résultat."},
+  {tag:'ext', tagLabel:'Pig', q:"Comparez Pig et Spark pour les traitements ETL.", a:"Pig compile en MapReduce (lecture/écriture disque), donc plus lent. Spark traite en mémoire et est 10-100× plus rapide. Pig a un langage plus simple et orienté flux de données, Spark a une API plus riche (ML, SQL, streaming). En pratique, Spark remplace progressivement Pig dans les nouveaux projets."},
+];
+
+window.QCM = [
+  {type:'single', q:"Quelle méthode d'un Estimator Spark ML produit un Transformer ?", opts:["transform()","predict()","fit()","evaluate()"], correct:[2], explain:"fit() entraîne l'Estimator sur un DataFrame et retourne un Transformer (le modèle entraîné). C'est ensuite ce Transformer qu'on appelle avec transform() sur de nouvelles données pour obtenir des prédictions.", theme:"Spark ML"},
+  {type:'multi', q:"Parmi ces éléments, lesquels sont des Transformers dans Spark ML ?", opts:["VectorAssembler","LogisticRegression","StringIndexer","Un modèle LinearRegression déjà entraîné","RandomForest"], correct:[0,2,3], explain:"VectorAssembler et StringIndexer sont des Transformers (pas d'entraînement, ils appliquent une règle). Un modèle déjà entraîné (ex: LinearRegressionModel) est aussi un Transformer. LogisticRegression et RandomForest sont des Estimators (ils ont besoin d'un fit()).", theme:"Spark ML"},
+  {type:'tf', q:"Un Pipeline Spark ML peut contenir à la fois des Transformers et des Estimators.", opts:["Vrai","Faux"], correct:[0], explain:"Vrai. C'est la force du Pipeline : il enchaîne des Transformers (StringIndexer, VectorAssembler, StandardScaler) et des Estimators (LogisticRegression, RandomForest) dans un ordre défini. Un seul fit() sur le Pipeline entraîne tous les Estimators en séquence.", theme:"Spark ML"},
+  {type:'single', q:"Quel composant Spark ML est indispensable pour préparer les données avant un algorithme de classification ?", opts:["CrossValidator","VectorAssembler","GraphX","Structured Streaming"], correct:[1], explain:"Tous les algorithmes Spark ML attendent leurs données sous forme d'un unique vecteur dense dans une colonne 'features'. VectorAssembler assemble plusieurs colonnes numériques en ce vecteur.", theme:"Spark ML"},
+  {type:'single', q:"Principale raison de choisir Spark ML plutôt que scikit-learn en production Big Data ?", opts:["Spark ML a plus d'algorithmes disponibles","Spark ML distribue le calcul sur un cluster, permettant de traiter des volumes impossibles sur une machine unique","Spark ML est plus simple à utiliser","Spark ML fonctionne sans cluster"], correct:[1], explain:"scikit-learn s'exécute sur une seule machine et est limité par la RAM disponible. Spark ML distribue les données et le calcul sur un cluster, permettant de traiter des pétaoctets de données avec un entraînement parallélisé.", theme:"Spark ML vs scikit-learn"},
+  {type:'single', q:"En Pig Latin, quelle commande déclenche réellement l'exécution des transformations ?", opts:["LOAD","FILTER","FOREACH","DUMP ou STORE"], correct:[3], explain:"Pig est lazy : LOAD, FILTER, FOREACH, GROUP construisent un plan logique sans rien exécuter. Seuls DUMP (affichage) et STORE (écriture dans HDFS) déclenchent l'exécution réelle (compilation en jobs MapReduce).", theme:"Pig"},
+  {type:'tf', q:"Pig Latin est un langage SQL qui s'exécute directement sur HDFS.", opts:["Vrai","Faux"], correct:[1], explain:"Faux sur deux points : Pig Latin n'est pas du SQL mais un langage de flux de données (dataflow language) avec une syntaxe propre (LOAD, FOREACH, GROUP...). Et il ne s'exécute pas directement : il compile en jobs MapReduce avant de s'exécuter sur le cluster Hadoop.", theme:"Pig"},
+  {type:'single', q:"En Pig Latin, à quoi sert FLATTEN ?", opts:["Mettre les données en minuscules","Décompresser une structure imbriquée (bag/tuple) en lignes individuelles","Joindre deux relations","Supprimer les lignes dupliquées"], correct:[1], explain:"FLATTEN est indispensable après des opérations qui produisent des structures imbriquées (bags) comme TOKENIZE ou GROUP. Il 'déplie' ces structures pour obtenir une ligne par élément.", theme:"Pig"},
+  {type:'multi', q:"Parmi ces affirmations sur Pig, lesquelles sont vraies ?", opts:["Pig Latin compile en jobs MapReduce","Le schéma est obligatoire en Pig","Pig est progressivement remplacé par Spark","DUMP écrit le résultat dans HDFS"], correct:[0,2], explain:"Pig Latin compile bien en MapReduce. Le schéma est facultatif en Pig (contrairement à Hive). Pig est effectivement progressivement remplacé par Spark. DUMP affiche à l'écran (debug) — c'est STORE qui écrit dans HDFS.", theme:"Pig"},
+  {type:'single', q:"Quelle est la principale différence entre Pig et Hive ?", opts:["Pig utilise SQL, Hive utilise un langage de script","Pig est pour l'ETL (développeurs), Hive est pour l'analyse SQL (analystes)","Pig est plus rapide que Hive","Hive ne fonctionne pas sur Hadoop"], correct:[1], explain:"Pig (Pig Latin) cible les développeurs et les transformations ETL complexes avec un schéma facultatif. Hive (HiveQL) cible les analystes habitués au SQL pour du reporting et de l'analyse, avec un schéma obligatoire.", theme:"Pig vs Hive"},
+  {type:'tf', q:"Dans un Pipeline Spark ML, le fit() est appelé sur les données de test pour appliquer les transformations.", opts:["Vrai","Faux"], correct:[1], explain:"Faux. Le fit() est appelé uniquement sur les données d'entraînement (train). On appelle ensuite transform() sur les données de test avec le modèle déjà entraîné. Appeler fit() sur les données de test causerait une fuite de données (data leakage).", theme:"Spark ML — Pipeline"},
+  {type:'single', q:"Quelle instruction Pig permet de projeter et transformer des colonnes (équivalent du SELECT SQL) ?", opts:["GROUP BY","FILTER","FOREACH ... GENERATE","LOAD"], correct:[2], explain:"FOREACH ... GENERATE est l'équivalent Pig Latin du SELECT SQL : il itère sur chaque tuple et génère de nouvelles colonnes ou transforme les colonnes existantes.", theme:"Pig Latin"},
+];
+</script>
+<script src="app.js"></script>
+</body>
+</html>

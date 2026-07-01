@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hadoop &amp; écosystème — bigdata-prep</title>
+<link rel="stylesheet" href="style.css">
+<style>:root{--accent:var(--hadoop);}</style>
+</head>
+<body data-mod="hadoop">
+<div class="node-field"></div>
+
+<header class="topbar">
+  <div class="wrap">
+    <div class="brand"><span class="dot"></span>bigdata-prep</div>
+    <nav class="nav-links">
+      <a href="index.html">Accueil</a>
+      <a href="hadoop.html" class="active">Hadoop</a>
+      <a href="spark.html">Spark</a>
+      <a href="spark-extensions.html">Extensions</a>
+      <a href="postgres-distribue.html">Postgres&nbsp;distribué</a>
+      <a href="docker.html">Docker</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="page-hero">
+    <span class="chip hadoop">Module 01 · Hadoop</span>
+    <h1 class="page-title" style="margin-top:14px;">Hadoop, HDFS &amp; MapReduce</h1>
+    <p class="page-sub">Le socle historique du Big Data : stockage distribué tolérant aux pannes (HDFS),
+    gestion des ressources (YARN), modèle de traitement parallèle (MapReduce), et l'écosystème d'outils qui gravite autour.</p>
+  </section>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="t-fiches">📄 Fiches</button>
+    <button class="tab-btn" data-tab="t-flash">🃏 Flashcards</button>
+    <button class="tab-btn" data-tab="t-qcm">🎯 QCM</button>
+  </div>
+
+  <!-- ===================== FICHES ===================== -->
+  <div class="tab-panel active" id="t-fiches">
+
+    <div class="fiche-section">
+      <h2>Big Data — rappel</h2>
+      <div class="card-grid">
+        <div class="def-card wide">
+          <h4>Définition</h4>
+          <p>Volumes de données si massifs, variés et rapides qu'ils dépassent les capacités des outils de gestion classiques (SGBD relationnels mono-serveur).</p>
+          <div class="badge-row">
+            <span class="mini-badge">Volume</span><span class="mini-badge">Vélocité</span>
+            <span class="mini-badge">Variété</span><span class="mini-badge">Véracité</span><span class="mini-badge">Valeur</span>
+          </div>
+        </div>
+        <div class="def-card">
+          <h4>Scale-up (vertical)</h4>
+          <p>Renforcer une seule machine (plus de CPU/RAM/disque). Limite physique et coût exponentiel.</p>
+        </div>
+        <div class="def-card">
+          <h4>Scale-out (horizontal)</h4>
+          <p>Ajouter des machines standard (commodity hardware) au cluster. Approche d'Hadoop : économique et quasi illimitée.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="fiche-section">
+      <h2>Apache Hadoop — vue d'ensemble</h2>
+      <div class="card-grid">
+        <div class="def-card wide">
+          <h4>Définition</h4>
+          <p>Framework open source Java pour le stockage et le traitement distribué de très grands ensembles de données sur des clusters de serveurs standard. Inspiré des papiers Google GFS (2003) et MapReduce (2004), créé par Doug Cutting (issu du projet Nutch).</p>
+        </div>
+        <div class="def-card">
+          <h4>3 avantages majeurs</h4>
+          <ul>
+            <li><b>Tolérance aux pannes</b> — réplication des données</li>
+            <li><b>Évolutivité horizontale</b> — scale-out</li>
+            <li><b>Rentabilité</b> — commodity hardware</li>
+          </ul>
+        </div>
+        <div class="def-card">
+          <h4>3 piliers du cours</h4>
+          <p><b>HDFS</b> (stockage) · <b>YARN</b> (gestion des ressources) · <b>MapReduce</b> (traitement) — chacun a une architecture maître/esclave.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="fiche-section">
+      <h2>Architecture Master-Slave du cluster</h2>
+      <div class="card-grid">
+        <div class="def-card wide">
+          <h4>Master Node</h4>
+          <p>Orchestre le cluster : gère les métadonnées, coordonne les esclaves, ne stocke <b>jamais</b> les données réelles. Composants : <b>NameNode</b> (HDFS), <b>ResourceManager</b> (YARN), <b>Secondary NameNode</b> (checkpoints).</p>
+        </div>
+        <div class="def-card wide">
+          <h4>⚠️ Piège classique</h4>
+          <p>Le <b>Secondary NameNode n'est PAS un NameNode de secours</b>. Il effectue des checkpoints périodiques des métadonnées (fusion du <i>edit log</i> et du <i>fsimage</i>) pour éviter la corruption — il ne peut pas prendre le relais en cas de panne.</p>
+        </div>
+        <div class="def-card">
+          <h4>Slave / Worker Nodes</h4>
+          <p>Stockent les données réelles et exécutent les calculs. Composants : <b>DataNode</b> (HDFS), <b>NodeManager</b> (YARN), TaskTracker (déprécié, MapReduce v1).</p>
+        </div>
+        <div class="def-card">
+          <h4>Heartbeat</h4>
+          <p>Chaque DataNode envoie régulièrement un signal de vie au NameNode. Sans heartbeat pendant <b>10 minutes</b>, le nœud est déclaré défaillant et ses blocs sont re-répliqués ailleurs.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="fiche-section">
+      <h2>Haute disponibilité (HA)</h2>
+      <div class="card-grid">
+        <div class="def-card">
+          <h4>Le problème : SPOF</h4>
+          <p>Le NameNode est un point unique de défaillance. S'il tombe, tout le cluster devient inaccessible.</p>
+        </div>
+        <div class="def-card">
+          <h4>La solution : Active / Standby</h4>
+          <p><b>Active NameNode</b> traite les requêtes. <b>Standby NameNode</b> est synchronisé en temps réel et prêt à prendre le relais (failover automatique ou manuel).</p>
+        </div>
+        <div class="def-card wide">
+          <h4>Les briques de la HA</h4>
+          <table class="fiche-table">
+            <tr><th>Composant</th><th>Rôle</th></tr>
+            <tr><td>JournalNodes</td><td>Stockage partagé (cluster de 3 ou 5) où les deux NameNodes écrivent — assure la cohérence des métadonnées</td></tr>
+            <tr><td>ZooKeeper</td><td>Coordonne le basculement automatique, élit le NameNode actif, évite le <b>split-brain</b> (deux actifs simultanés)</td></tr>
+            <tr><td>ZKFC</td><td>ZooKeeper Failover Controller — processus léger sur chaque NameNode qui surveille sa santé et communique avec ZooKeeper</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="fiche-section">
+      <h2>HDFS — Hadoop Distributed File System</h2>
+      <div class="card-grid">
+        <div class="def-card wide">
+          <h4>Principe</h4>
+          <p>Inspiré du Google File System (GFS, 2003). Un fichier est divisé en <b>blocs de 128 Mo</b> (par défaut), chaque bloc est répliqué (<b>3 réplicats</b> par défaut) et distribué sur plusieurs DataNodes.</p>
+        </div>
+        <div class="def-card">
+          <h4>NameNode</h4>
+          <p>Gère l'arborescence, la localisation des blocs, les permissions. Ne contient <b>que des métadonnées</b>.</p>
+        </div>
+        <div class="def-card">
+          <h4>DataNode</h4>
+          <p>Stocke les blocs réels, répond aux lectures/écritures, crée/supprime/réplique les blocs sur ordre du NameNode.</p>
+        </div>
+        <div class="def-card wide">
+          <h4>Workflow d'accès</h4>
+          <p>1. Le client contacte le NameNode pour connaître l'arborescence et la localisation des blocs.<br>
+          2. Le client accède <b>directement</b> aux DataNodes pour lire/écrire les données (le NameNode n'est jamais sur le chemin des données).</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="fiche-section">
+      <h2>HDFS — commandes CLI</h2>
+      <p class="desc">Structure générale : <code>hdfs dfs -&lt;commande&gt; [arguments]</code> — très proche d'UNIX.</p>
+      <pre class="code-block"><span class="c"># Navigation et gestion des dossiers</span>
+hdfs dfs -ls /user/data
+hdfs dfs -mkdir /mon_projet
+hdfs dfs -rm /data/old_file.txt
+hdfs dfs -rm -r /temp_data
+
+<span class="c"># Transfert local ↔ HDFS</span>
+hdfs dfs -put /home/user/dataset.csv /data/
+hdfs dfs -get /data/resultats.csv ./local_folder/
+
+<span class="c"># Consultation</span>
+hdfs dfs -cat /data/config.xml
+hdfs dfs -tail /data/output.log
+hdfs dfs -du -h /user/data
+
+<span class="c"># Administration du cluster</span>
+hdfs dfsadmin -report   <span class="c"># état des DataNodes, espace libre</span>
+hdfs fsck /              <span class="c"># vérifie les blocs corrompus</span></pre>
+    </div>
+
+    <div class="fiche-section">
+      <h2>YARN — Yet Another Resource Negotiator</h2>
+      <div class="card-grid">
+        <div class="def-card wide">
+          <h4>Pourquoi YARN ?</h4>
+          <p>Introduit dans Hadoop 2.0. Dans Hadoop 1.x, le <b>JobTracker</b> gérait à la fois les ressources ET les jobs → goulot d'étranglement et SPOF. YARN sépare ces deux responsabilités et devient un véritable système d'exploitation distribué, capable de faire tourner MapReduce, Spark, Flink...</p>
+        </div>
+        <div class="def-card">
+          <h4>ResourceManager (RM)</h4>
+          <p>Le coordinateur global : gère les ressources du cluster (CPU/RAM), planifie et alloue les conteneurs.</p>
+        </div>
+        <div class="def-card">
+          <h4>NodeManager (NM)</h4>
+          <p>Un par nœud esclave. Lance et surveille les conteneurs, rapporte l'utilisation des ressources au RM.</p>
+        </div>
+        <div class="def-card">
+          <h4>ApplicationMaster (AM)</h4>
+          <p>Un par application (job). Négocie les ressources avec le RM et coordonne l'exécution des tâches.</p>
+        </div>
+        <div class="def-card wide">
+          <h4>Workflow</h4>
+          <p>Client → soumet à RM → RM alloue un conteneur pour l'AM → l'AM négocie ses ressources → RM alloue des conteneurs sur les NM → l'AM lance les tâches → les NM surveillent et rapportent au RM → l'AM rapporte au client → fin, libération des ressources.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="fiche-section">
+      <h2>MapReduce</h2>
+      <div class="card-grid">
+        <div class="def-card wide">
+          <h4>Définition</h4>
+          <p>Modèle de programmation pour le traitement distribué, développé par Google (2004), inspiré de la programmation fonctionnelle. Principe : diviser (Map) → traiter en parallèle → combiner (Reduce).</p>
+        </div>
+        <div class="def-card">
+          <h4>Phase Map</h4>
+          <p>Traite les données en entrée, produit des paires clé-valeur intermédiaires, exécutée en parallèle.</p>
+        </div>
+        <div class="def-card">
+          <h4>Shuffle &amp; Sort</h4>
+          <p>Étape intermédiaire : regroupement des valeurs par clé, tri, distribution aux reducers.</p>
+        </div>
+        <div class="def-card">
+          <h4>Phase Reduce</h4>
+          <p>Agrège les valeurs par clé, produit le résultat final. Une tâche Reduce par clé.</p>
+        </div>
+        <div class="def-card wide">
+          <h4>WordCount — exemple</h4>
+          <pre class="code-block"><span class="f">def</span> mapper(line):
+    <span class="k">for</span> word <span class="k">in</span> line.split():
+        emit(word, 1)
+<span class="c"># "Hello World Hello" → (Hello,1) (World,1) (Hello,1)</span>
+
+<span class="f">def</span> reducer(key, values):
+    emit(key, sum(values))
+<span class="c"># Hello -> [1,1]  =>  (Hello, 2)</span></pre>
+        </div>
+        <div class="def-card">
+          <h4>Avantages</h4>
+          <ul><li>Parallélisation automatique</li><li>Tolérance aux pannes</li><li>Scalabilité horizontale</li></ul>
+        </div>
+        <div class="def-card">
+          <h4>Limites</h4>
+          <ul><li>Latence élevée (batch, écritures disque à chaque étape)</li><li>Pas adapté au temps réel</li><li>Remplacé en pratique par Spark (en mémoire, 10-100× plus rapide)</li></ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="fiche-section">
+      <h2>Écosystème Hadoop étendu</h2>
+      <p class="desc">Outils complémentaires, organisés par fonction.</p>
+      <div class="card-grid">
+        <div class="def-card">
+          <h4>📥 Ingestion</h4>
+          <table class="fiche-table">
+            <tr><td><b>Sqoop</b></td><td>Import/export depuis bases relationnelles</td></tr>
+            <tr><td><b>Flume</b></td><td>Collecte de logs en temps réel</td></tr>
+            <tr><td><b>Kafka</b></td><td>Streaming de données</td></tr>
+          </table>
+        </div>
+        <div class="def-card">
+          <h4>⚙️ Traitement</h4>
+          <table class="fiche-table">
+            <tr><td><b>Hive</b></td><td>SQL sur Hadoop (data warehouse)</td></tr>
+            <tr><td><b>Pig</b></td><td>Langage de script pour ETL</td></tr>
+            <tr><td><b>Spark</b></td><td>Traitement en mémoire (module 2)</td></tr>
+          </table>
+        </div>
+        <div class="def-card">
+          <h4>🧭 Coordination</h4>
+          <table class="fiche-table">
+            <tr><td><b>ZooKeeper</b></td><td>Service de coordination distribué</td></tr>
+            <tr><td><b>Oozie</b></td><td>Ordonnancement de workflows</td></tr>
+          </table>
+        </div>
+        <div class="def-card wide">
+          <h4>HBase</h4>
+          <p>Base de données NoSQL distribuée, <b>orientée colonnes</b>, construite sur HDFS. Modèle clé-valeur avec familles de colonnes, accès aléatoire rapide en lecture/écriture, scalabilité linéaire. Inspirée de <b>Google BigTable</b>.</p>
+        </div>
+        <div class="def-card wide">
+          <h4>Hive</h4>
+          <p>Data warehouse fournissant une interface SQL (<b>HiveQL</b>) sur des données stockées dans HDFS. Convertit les requêtes en jobs MapReduce/Spark. Métadonnées dans un <i>metastore</i> (souvent MySQL). Schéma à la lecture (<b>schema-on-read</b>). Avantages : facilité pour utilisateurs SQL, intégration BI (Tableau, Power BI), formats variés (Parquet, ORC, JSON).</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="fiche-section">
+      <h2>Tendances actuelles</h2>
+      <div class="card-grid">
+        <div class="def-card">
+          <h4>Hadoop aujourd'hui</h4>
+          <p>Toujours utilisé en entreprise (Yahoo, Meta, LinkedIn), base de nombreux data lakes, complémentaire au Cloud (AWS EMR, Azure HDInsight, GCP Dataproc).</p>
+        </div>
+        <div class="def-card">
+          <h4>Évolutions</h4>
+          <p>Spark remplace progressivement MapReduce. Lakehouse = fusion data lake + data warehouse (Delta Lake, Iceberg). Streaming temps réel avec Flink, Kafka Streams.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===================== FLASHCARDS ===================== -->
+  <div class="tab-panel" id="t-flash">
+    <div class="fc-toolbar">
+      <span class="fc-progress" id="fc-progress">Carte 1 sur 1</span>
+      <div style="display:flex;gap:8px;">
+        <button class="fc-btn" id="fc-shuffle">🔀 Mélanger</button>
+      </div>
+    </div>
+    <div class="fc-stage" id="fc-stage"></div>
+    <div class="fc-nav" style="justify-content:center;margin-top:18px;">
+      <button class="fc-btn" id="fc-prev">← Précédent</button>
+      <span class="count" id="fc-count">1 / 1</span>
+      <button class="fc-btn" id="fc-next">Suivant →</button>
+    </div>
+  </div>
+
+  <!-- ===================== QCM ===================== -->
+  <div class="tab-panel" id="t-qcm">
+    <div id="qcm-root"></div>
+  </div>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>bigdata-prep · Module 01 — Hadoop</p>
+    <p><a href="index.html">← Retour à l'accueil</a></p>
+  </div>
+</footer>
+
+<script>
+window.QCM_ACCENT = '#f5a623';
+
+window.FLASHCARDS = [
+  {tag:'hadoop', tagLabel:'HDFS', q:"Quel est le rôle exact du Secondary NameNode ?", a:"Il effectue des checkpoints périodiques en fusionnant l'edit log et le fsimage pour éviter la corruption des métadonnées. Ce N'EST PAS un NameNode de secours : il ne peut pas reprendre le service en cas de panne du NameNode principal."},
+  {tag:'hadoop', tagLabel:'HDFS', q:"Pourquoi HDFS réplique-t-il les blocs par défaut 3 fois ?", a:"Pour garantir la tolérance aux pannes sur du commodity hardware : si un DataNode tombe (pas de heartbeat pendant 10 min), les données restent disponibles via les répliques, et le NameNode déclenche une re-réplication."},
+  {tag:'hadoop', tagLabel:'YARN', q:"Expliquez le problème résolu par YARN par rapport à Hadoop 1.x.", a:"Dans Hadoop 1.x, le JobTracker gérait à la fois la gestion des ressources ET le suivi des jobs, créant un goulot d'étranglement et un SPOF. YARN sépare ces rôles : le ResourceManager gère les ressources globalement, l'ApplicationMaster gère chaque job individuellement."},
+  {tag:'hadoop', tagLabel:'YARN', q:"Quels sont les 3 composants principaux de YARN et leur rôle ?", a:"ResourceManager (coordinateur global des ressources CPU/RAM), NodeManager (un par nœud, lance/surveille les conteneurs), ApplicationMaster (un par application, négocie les ressources et coordonne les tâches)."},
+  {tag:'hadoop', tagLabel:'MapReduce', q:"Décrivez les 3 étapes du pipeline MapReduce.", a:"Map : traite les données en entrée et produit des paires clé-valeur intermédiaires, en parallèle. Shuffle & Sort : regroupe les valeurs par clé et les trie. Reduce : agrège les valeurs par clé pour produire le résultat final."},
+  {tag:'hadoop', tagLabel:'MapReduce', q:"Citez 2 limites de MapReduce et l'alternative moderne.", a:"Latence élevée car traitement par batch avec lecture/écriture disque à chaque étape, et pas adapté au temps réel. Alternative : Apache Spark, qui traite en mémoire et peut être 10 à 100× plus rapide."},
+  {tag:'hadoop', tagLabel:'HA', q:"Quel est le rôle de ZooKeeper dans la haute disponibilité de HDFS ?", a:"ZooKeeper coordonne le basculement automatique entre NameNode actif et standby, élit le NameNode actif, et évite le split-brain (situation où deux NameNodes seraient actifs simultanément)."},
+  {tag:'hadoop', tagLabel:'Architecture', q:"Le Master Node stocke-t-il les données réelles du cluster ?", a:"Non. Le Master Node (NameNode, ResourceManager) ne gère que les métadonnées et l'orchestration. Les données réelles sont stockées sur les Slave/Worker Nodes (DataNodes)."},
+  {tag:'hadoop', tagLabel:'Écosystème', q:"Comparez Hive et HBase.", a:"Hive est un data warehouse SQL (HiveQL) pensé pour l'analytique batch en lecture, avec un schéma à la lecture. HBase est une base NoSQL orientée colonnes construite sur HDFS, pensée pour l'accès aléatoire rapide en lecture/écriture, inspirée de Google BigTable."},
+  {tag:'hadoop', tagLabel:'Écosystème', q:"Quels outils utiliseriez-vous pour ingérer (1) des données depuis une base relationnelle, (2) des logs en temps réel, (3) un flux de streaming ?", a:"(1) Sqoop pour l'import/export depuis des bases relationnelles. (2) Flume pour la collecte de logs en temps réel. (3) Kafka pour le streaming de données."},
+  {tag:'hadoop', tagLabel:'Scalabilité', q:"Différenciez scale-up et scale-out, et indiquez l'approche privilégiée par Hadoop.", a:"Scale-up = renforcer une seule machine (vertical), limité physiquement et coûteux. Scale-out = ajouter des machines standard (horizontal), c'est l'approche d'Hadoop, économique et quasi illimitée."},
+  {tag:'hadoop', tagLabel:'HDFS', q:"Comment un client lit-il un fichier dans HDFS ? Détaillez le workflow.", a:"Le client contacte d'abord le NameNode pour obtenir la structure de l'arbre de fichiers et la localisation des blocs. Ensuite, il accède directement aux DataNodes concernés pour lire les données — le NameNode n'intervient jamais dans le transfert réel des données."},
+];
+
+window.QCM = [
+  {type:'tf', q:"Le Secondary NameNode peut prendre le relais automatiquement si le NameNode principal tombe en panne.", opts:["Vrai","Faux"], correct:[1], explain:"Faux. Le Secondary NameNode effectue uniquement des checkpoints périodiques des métadonnées ; il ne peut pas se substituer au NameNode actif. C'est le rôle du Standby NameNode dans une architecture HA.", theme:"HDFS"},
+  {type:'single', q:"Dans Hadoop 1.x, quel composant cumulait gestion des ressources et suivi des jobs, créant un goulot d'étranglement ?", opts:["NameNode","JobTracker","DataNode","ZooKeeper"], correct:[1], explain:"Le JobTracker gérait à la fois l'allocation des ressources et le suivi de l'exécution des jobs, ce qui en faisait un SPOF. YARN a séparé ces responsabilités entre ResourceManager et ApplicationMaster.", theme:"YARN"},
+  {type:'multi', q:"Parmi ces affirmations sur HDFS, lesquelles sont correctes ?", opts:["La taille de bloc par défaut est 128 Mo","Le facteur de réplication par défaut est 3","Le NameNode stocke physiquement les blocs de données","Le client lit les données directement depuis les DataNodes"], correct:[0,1,3], explain:"Le NameNode ne stocke que les métadonnées (emplacement des blocs), jamais les données elles-mêmes — celles-ci résident sur les DataNodes, que le client contacte directement pour les opérations de lecture/écriture.", theme:"HDFS"},
+  {type:'single', q:"Quelle commande HDFS permet de vérifier l'état des DataNodes et l'espace disponible ?", opts:["hdfs fsck /","hdfs dfsadmin -report","hdfs dfs -du -h /","hdfs dfs -ls /"], correct:[1], explain:"hdfs dfsadmin -report affiche un rapport sur l'état des DataNodes et l'espace libre du cluster. hdfs fsck vérifie l'intégrité (blocs corrompus).", theme:"HDFS — CLI"},
+  {type:'tf', q:"YARN permet d'exécuter plusieurs frameworks (MapReduce, Spark, Flink) sur le même cluster.", opts:["Vrai","Faux"], correct:[0], explain:"Vrai. C'est le principe de multi-tenancy de YARN : en séparant la gestion des ressources de la logique applicative, YARN peut allouer des conteneurs à n'importe quel framework compatible.", theme:"YARN"},
+  {type:'single', q:"Dans le workflow MapReduce, à quoi sert l'étape 'Shuffle & Sort' ?", opts:["Elle exécute la fonction Reduce","Elle charge les données depuis HDFS","Elle regroupe les valeurs par clé et les trie avant de les distribuer aux reducers","Elle réplique les blocs de données"], correct:[2], explain:"Le Shuffle & Sort est l'étape intermédiaire entre Map et Reduce : elle regroupe toutes les valeurs associées à une même clé et les trie, avant de les envoyer au reducer responsable de cette clé.", theme:"MapReduce"},
+  {type:'multi', q:"Quels composants font partie de l'architecture haute disponibilité (HA) de HDFS ?", opts:["JournalNodes","ZooKeeper","ZKFC","TaskTracker"], correct:[0,1,2], explain:"JournalNodes (stockage partagé des métadonnées), ZooKeeper (élection et coordination du failover) et ZKFC (surveillance locale de chaque NameNode) forment ensemble l'architecture HA. TaskTracker est un composant déprécié de MapReduce v1, sans rapport avec la HA.", theme:"Haute disponibilité"},
+  {type:'single', q:"Quel outil de l'écosystème Hadoop fournit une interface SQL (HiveQL) sur des données HDFS ?", opts:["Pig","Sqoop","Hive","Flume"], correct:[2], explain:"Hive convertit des requêtes HiveQL en jobs MapReduce ou Spark, avec un schéma-à-la-lecture et un metastore pour les métadonnées. Pig utilise un langage de script (Pig Latin), pas du SQL.", theme:"Écosystème"},
+  {type:'tf', q:"Le facteur de réplication HDFS garantit qu'aucune donnée ne peut jamais être perdue, quel que soit le nombre de pannes simultanées.", opts:["Vrai","Faux"], correct:[1], explain:"Faux. La réplication (3 par défaut) réduit fortement le risque de perte mais ne l'élimine pas : si le nombre de pannes simultanées dépasse le facteur de réplication, une perte de données reste possible.", theme:"HDFS"},
+  {type:'single', q:"Quel composant YARN est responsable de négocier les ressources nécessaires à un job spécifique auprès du ResourceManager ?", opts:["NodeManager","ApplicationMaster","DataNode","Secondary NameNode"], correct:[1], explain:"L'ApplicationMaster est instancié une fois par application/job. Il négocie les ressources avec le ResourceManager et coordonne l'exécution des tâches dans les conteneurs alloués.", theme:"YARN"},
+  {type:'single', q:"HBase s'inspire de quelle technologie de Google ?", opts:["Google File System (GFS)","Google MapReduce","Google BigTable","Google Spanner"], correct:[2], explain:"HBase, base NoSQL orientée colonnes construite sur HDFS, est directement inspirée du papier Google BigTable.", theme:"Écosystème"},
+  {type:'multi', q:"Parmi ces outils, lesquels servent à l'ingestion de données vers Hadoop ?", opts:["Sqoop","Hive","Flume","Kafka"], correct:[0,2,3], explain:"Sqoop (depuis bases relationnelles), Flume (logs temps réel) et Kafka (streaming) sont des outils d'ingestion. Hive est un outil de traitement/interrogation, pas d'ingestion.", theme:"Écosystème"},
+];
+</script>
+<script src="app.js"></script>
+</body>
+</html>

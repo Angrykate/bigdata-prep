@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>bigdata-prep — Révision Infrastructure Big Data</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="node-field"></div>
+
+<header class="topbar">
+  <div class="wrap">
+    <div class="brand"><span class="dot"></span>bigdata-prep<small>&nbsp;· cluster revision kit</small></div>
+    <nav class="nav-links">
+      <a href="hadoop.html">Hadoop</a>
+      <a href="spark.html">Spark</a>
+      <a href="spark-extensions.html">Extensions</a>
+      <a href="postgres-distribue.html">Postgres&nbsp;distribué</a>
+      <a href="docker.html">Docker</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="page-hero">
+    <div class="eyebrow">
+      <span class="seg"><span class="dot" style="background:var(--hadoop)"></span>Hadoop</span>
+      <span class="seg"><span class="dot" style="background:var(--spark)"></span>Spark</span>
+      <span class="seg"><span class="dot" style="background:var(--ext)"></span>Extensions</span>
+      <span class="seg"><span class="dot" style="background:var(--pg)"></span>Postgres distribué</span>
+      <span class="seg"><span class="dot" style="background:var(--docker)"></span>Docker</span>
+    </div>
+    <h1 class="page-title">Préparation à l'examen<br>Infrastructure &amp; traitement distribué</h1>
+    <p class="page-sub">
+      Suite de <i>Révision — Bases de Données Distribuées</i>. Ce site couvre la deuxième moitié du programme :
+      le stockage et le traitement distribués à grande échelle (Hadoop, Spark), leurs extensions,
+      et la distribution d'une base relationnelle (PostgreSQL, FDW, Citus, Docker).
+    </p>
+  </section>
+
+  <section class="stat-strip">
+    <div class="stat"><div class="n">5</div><div class="l">Modules</div></div>
+    <div class="stat"><div class="n">~140</div><div class="l">Fiches &amp; cartes</div></div>
+    <div class="stat"><div class="n">5</div><div class="l">Séries de QCM</div></div>
+    <div class="stat"><div class="n">100%</div><div class="l">Hors présentations</div></div>
+  </section>
+
+  <section class="module-grid">
+
+    <a class="module-card" data-mod="hadoop" href="hadoop.html">
+      <div class="accent-bar"></div>
+      <div class="num">Module 01</div>
+      <h3>Hadoop &amp; écosystème</h3>
+      <p>HDFS, YARN, MapReduce, haute disponibilité, commandes CLI, et l'écosystème étendu (Hive, HBase, Sqoop, Kafka...).</p>
+      <div class="tags">
+        <span class="tag">NameNode</span><span class="tag">YARN</span><span class="tag">MapReduce</span><span class="tag">HA</span>
+      </div>
+      <div class="go">Ouvrir le module →</div>
+    </a>
+
+    <a class="module-card" data-mod="spark" href="spark.html">
+      <div class="accent-bar"></div>
+      <div class="num">Module 02</div>
+      <h3>Apache Spark</h3>
+      <p>Architecture (Driver/Executor), RDD, DAG, DataFrame, Spark SQL, partitionnement, cache et persistance.</p>
+      <div class="tags">
+        <span class="tag">RDD</span><span class="tag">DataFrame</span><span class="tag">Spark SQL</span><span class="tag">DAG</span>
+      </div>
+      <div class="go">Ouvrir le module →</div>
+    </a>
+
+    <a class="module-card" data-mod="ext" href="spark-extensions.html">
+      <div class="accent-bar"></div>
+      <div class="num">Module 03</div>
+      <h3>Extensions Spark</h3>
+      <p>Spark ML (Pipeline, Transformer, Estimator) et Apache Pig (Pig Latin) — les outils complémentaires de l'écosystème.</p>
+      <div class="tags">
+        <span class="tag">MLlib</span><span class="tag">Pipeline</span><span class="tag">Pig Latin</span>
+      </div>
+      <div class="go">Ouvrir le module →</div>
+    </a>
+
+    <a class="module-card" data-mod="pg" href="postgres-distribue.html">
+      <div class="accent-bar"></div>
+      <div class="num">Module 04</div>
+      <h3>PostgreSQL distribué</h3>
+      <p>Partitionnement local, Foreign Data Wrapper (FDW), et distribution réelle avec Citus (coordinateur, workers, shards).</p>
+      <div class="tags">
+        <span class="tag">PARTITION BY</span><span class="tag">FDW</span><span class="tag">Citus</span>
+      </div>
+      <div class="go">Ouvrir le module →</div>
+    </a>
+
+    <a class="module-card" data-mod="docker" href="docker.html">
+      <div class="accent-bar"></div>
+      <div class="num">Module 05</div>
+      <h3>Docker</h3>
+      <p>Conteneurs vs VM, images, Dockerfile, volumes, réseaux, et Docker Compose — la brique d'orchestration des clusters Citus.</p>
+      <div class="tags">
+        <span class="tag">Image</span><span class="tag">Volume</span><span class="tag">Compose</span>
+      </div>
+      <div class="go">Ouvrir le module →</div>
+    </a>
+
+  </section>
+
+  <section class="fiche-section">
+    <h2>Comment réviser efficacement</h2>
+    <p class="desc">Chaque module suit la même structure, à parcourir dans l'ordre.</p>
+    <div class="card-grid">
+      <div class="def-card">
+        <h4>📄 Fiches</h4>
+        <p>Le cours condensé : définitions, schémas d'architecture, commandes clés et tableaux comparatifs.</p>
+      </div>
+      <div class="def-card">
+        <h4>🃏 Flashcards</h4>
+        <p>Questions courtes <i>et</i> questions ouvertes type devoir (comparaisons, justifications) — pour s'auto-tester sans pression de correction.</p>
+      </div>
+      <div class="def-card">
+        <h4>🎯 QCM</h4>
+        <p>Vrai/Faux, QCM à une ou plusieurs réponses, avec explication immédiate et score final — dans l'esprit du devoir déjà passé.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>bigdata-prep · Programmation Distribuée · Semestre 6</p>
+    <p>Bonne chance pour l'examen 🚀</p>
+  </div>
+</footer>
+
+</body>
+</html>

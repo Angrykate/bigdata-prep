@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apache Spark — bigdata-prep</title>
+<link rel="stylesheet" href="style.css">
+<style>:root{--accent:var(--spark);}</style>
+</head>
+<body data-mod="spark">
+<div class="node-field"></div>
+
+<header class="topbar">
+  <div class="wrap">
+    <div class="brand"><span class="dot" style="background:var(--spark)"></span>bigdata-prep</div>
+    <nav class="nav-links">
+      <a href="index.html">Accueil</a>
+      <a href="hadoop.html">Hadoop</a>
+      <a href="spark.html" class="active">Spark</a>
+      <a href="spark-extensions.html">Extensions</a>
+      <a href="postgres-distribue.html">Postgres&nbsp;distribué</a>
+      <a href="docker.html">Docker</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="page-hero">
+    <span class="chip spark">Module 02 · Spark</span>
+    <h1 class="page-title" style="margin-top:14px;">Apache Spark</h1>
+    <p class="page-sub">Le successeur de MapReduce : traitement en mémoire jusqu'à 100× plus rapide,
+    API unifiée pour le batch, le streaming, le ML et le SQL, avec un modèle de données distribué basé sur les RDD et les DataFrames.</p>
+  </section>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="t-fiches">📄 Fiches</button>
+    <button class="tab-btn" data-tab="t-flash">🃏 Flashcards</button>
+    <button class="tab-btn" data-tab="t-qcm">🎯 QCM</button>
+  </div>
+
+  <!-- ===================== FICHES ===================== -->
+  <div class="tab-panel active" id="t-fiches">
+
+    <!-- VUE D'ENSEMBLE -->
+    <div class="fiche-section">
+      <h2>Vue d'ensemble</h2>
+      <div class="card-grid">
+        <div class="def-card wide">
+          <h4>Définition</h4>
+          <p>Apache Spark est un moteur de traitement de données <b>unifié</b> et <b>distribué</b>, créé à UC Berkeley en 2009 et open-source depuis 2010. Il est écrit en Scala mais propose des APIs en Python (PySpark), Java, R et SQL. Son principal atout est le traitement <b>en mémoire vive (RAM)</b>, ce qui le rend jusqu'à 100× plus rapide que MapReduce pour les traitements itératifs.</p>
+          <p style="margin-top:8px;">Il est utilisé en production par Netflix, Uber, Airbnb, Apple et traite des pétaoctets de données par jour.</p>
+        </div>
+        <div class="def-card wide">
+          <h4>Spark vs MapReduce — pourquoi Spark a pris le dessus</h4>
+          <table class="fiche-table">
+            <tr><th>Critère</th><th>MapReduce (Hadoop)</th><th>Apache Spark</th></tr>
+            <tr><td>Stockage intermédiaire</td><td>Disque HDFS à <b>chaque étape</b> — très coûteux en I/O</td><td><b>RAM</b> — les données restent en mémoire entre les étapes</td></tr>
+            <tr><td>Modèle de calcul</td><td>Rigide : Map → Shuffle → Reduce uniquement</td><td>DAG multi-étapes libre, n'importe quelle séquence de transformations</td></tr>
+            <tr><td>Latence</td><td>Secondes à minutes (à cause des écriture disque)</td><td>Sous-secondes à secondes</td></tr>
+            <tr><td>API</td><td>Java verbeux, difficile à écrire</td><td>Python / SQL concis et intuitif</td></tr>
+            <tr><td>Traitements itératifs (ML)</td><td>Très lent : chaque itération relit le disque</td><td>Très rapide : les données restent en cache mémoire</td></tr>
+            <tr><td>Temps réel</td><td>Non adapté (batch uniquement)</td><td>Oui, via Structured Streaming</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ÉCOSYSTÈME -->
+    <div class="fiche-section">
+      <h2>L'écosystème Spark</h2>
+      <p class="desc">Spark ne fait pas que du batch — c'est un moteur <i>unifié</i> qui couvre plusieurs domaines via des bibliothèques intégrées.</p>
+      <div class="card-grid">
+        <div class="def-card">
+          <h4>Spark Core</h4>
+          <p>Le moteur de base sur lequel reposent toutes les autres bibliothèques. Il gère les RDD, l'ordonnancement des tâches sur le cluster, la tolérance aux pannes via le lineage, et la communication entre le driver et les executors.</p>
+        </div>
+        <div class="def-card">
+          <h4>Spark SQL</h4>
+          <p>Permet d'interroger des DataFrames distribués avec du SQL standard. Il intègre l'optimiseur de requêtes <b>Catalyst</b> qui analyse, optimise et compile le plan d'exécution — qu'on passe par l'API DataFrame ou par du SQL pur, le plan final est identique.</p>
+        </div>
+        <div class="def-card">
+          <h4>Structured Streaming</h4>
+          <p>Traitement de flux de données en continu (streaming), en utilisant exactement la <b>même API que le batch</b>. Le flux est découpé en micro-batches traités comme des DataFrames ordinaires. Cela simplifie considérablement le code par rapport aux anciens systèmes de streaming.</p>
+        </div>
+        <div class="def-card">
+          <h4>MLlib (Spark ML)</h4>
+          <p>Bibliothèque de machine learning <b>distribuée</b> : classification, régression, clustering, pipelines. Son avantage clé sur scikit-learn : elle distribue l'entraînement sur tout le cluster, permettant de traiter des volumes bien trop grands pour une seule machine. (Voir Module 3 pour le détail.)</p>
+        </div>
+        <div class="def-card">
+          <h4>GraphX</h4>
+          <p>Traitement de graphes distribués (nœuds et arêtes). Fournit des algorithmes classiques comme PageRank ou le calcul des composantes connexes, distribués sur le cluster via les RDD.</p>
+        </div>
+        <div class="def-card">
+          <h4>SparkR</h4>
+          <p>API R pour Spark. Permet aux data scientists habitués à R d'accéder aux capacités de traitement distribué de Spark sans changer de langage.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ARCHITECTURE -->
+    <div class="fiche-section">
+      <h2>Architecture de Spark</h2>
+      <p class="desc">Spark suit une architecture maître/esclave, similaire dans l'esprit à Hadoop mais avec des rôles différents.</p>
+      <div class="card-grid">
+        <div class="def-card wide">
+          <h4>Les 5 composants de l'architecture</h4>
+          <table class="fiche-table">
+            <tr><th>Composant</th><th>Rôle détaillé</th></tr>
+            <tr><td><b>Driver Program</b></td><td>Le programme qu'on écrit. Contient toute la logique applicative. C'est lui qui définit les transformations et les actions sur les données.</td></tr>
+            <tr><td><b>SparkContext</b></td><td>Le point d'entrée de toute application Spark. Il est créé dans le Driver, se connecte au Cluster Manager et coordonne l'ensemble du cluster. Sans lui, rien ne fonctionne.</td></tr>
+            <tr><td><b>Cluster Manager</b></td><td>Gère les ressources physiques du cluster (CPU, RAM). Spark peut fonctionner avec YARN (Hadoop), Kubernetes, ou son propre gestionnaire (Standalone). Il alloue les ressources aux applications.</td></tr>
+            <tr><td><b>Executor</b></td><td>Processus JVM lancé sur chaque nœud worker. C'est lui qui exécute concrètement les tâches. Il possède aussi un cache local pour stocker des données en mémoire.</td></tr>
+            <tr><td><b>Task</b></td><td>L'unité minimale de travail : une task traite exactement une partition de données, sur un executor, à un instant donné.</td></tr>
+          </table>
+        </div>
+        <div class="def-card wide">
+          <h4>La règle fondamentale du parallélisme Spark</h4>
+          <p style="font-size:15px; font-weight:700; color:var(--spark); margin-bottom:8px;">1 partition = 1 task = 1 executor (à un instant T)</p>
+          <p>Le degré de parallélisme d'un job Spark est entièrement déterminé par le <b>nombre de partitions</b>. Si on a 100 partitions et 10 executors, Spark traite 10 partitions en parallèle en 10 vagues. Trop peu de partitions = certains executors sont inactifs (sous-utilisation). Trop de partitions = surcharge de coordination (overhead). La règle pratique est de viser <b>2 à 4 partitions par cœur CPU disponible</b>.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- RDD -->
+    <div class="fiche-section">
+      <h2>RDD — Resilient Distributed Dataset</h2>
+      <p class="desc">La structure de données fondamentale de Spark, sur laquelle repose tout le reste.</p>
+      <div class="card-grid">
+        <div class="def-card wide">
+          <h4>Définition et propriétés</h4>
+          <p>Un RDD est une collection d'objets distribuée sur les nœuds du cluster. Son nom décrit ses 5 propriétés fondamentales :</p>
+          <table class="fiche-table" style="margin-top:10px;">
+            <tr><th>Propriété</th><th>Ce que ça signifie concrètement</th></tr>
+            <tr><td><b>Resilient (résilient)</b></td><td>En cas de panne d'un executor, Spark peut reconstruire automatiquement les partitions perdues grâce au <b>lineage</b> — le graphe de toutes les transformations appliquées depuis la source.</td></tr>
+            <tr><td><b>Distributed (distribué)</b></td><td>Les données sont découpées en partitions réparties sur plusieurs nœuds du cluster. Chaque nœud ne traite que sa portion.</td></tr>
+            <tr><td><b>Dataset (jeu de données)</b></td><td>C'est une collection de données typées — elle peut contenir des entiers, des strings, des tuples, des objets, etc.</td></tr>
+            <tr><td><b>Immuable</b></td><td>On ne peut jamais modifier un RDD existant. Toute transformation produit un <b>nouveau</b> RDD. L'original est inchangé. Cela simplifie la tolérance aux pannes.</td></tr>
+            <tr><td><b>Lazy (paresseux)</b></td><td>Les transformations ne déclenchent aucun calcul immédiat. Spark construit d'abord un plan (le DAG), et n'exécute réellement qu'au moment d'une action.</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TRANSFORMATIONS EN DÉTAIL -->
+    <div class="fiche-section">
+      <h2>Transformations — détail de chaque opération</h2>
+      <p class="desc">Les transformations sont <b>lazy</b> : elles construisent le plan d'exécution (DAG) sans rien calculer.</p>
+      <div class="card-grid">
+        <div class="def-card">
+          <h4>map(fonction)</h4>
+          <p>Applique une fonction à <b>chaque élément</b> du RDD et retourne un nouveau RDD du <b>même nombre d'éléments</b>. La transformation est 1 pour 1 : un élément en entrée → un élément en sortie.</p>
+          <p style="margin-top:8px;color:var(--text-faint);font-size:13px;">Exemple : transformer chaque mot en minuscule, ou chaque ligne en tuple (mot, 1).</p>
+        </div>
+        <div class="def-card">
+          <h4>flatMap(fonction)</h4>
+          <p>Comme <code>map</code>, mais la fonction retourne une <b>liste</b> (ou séquence) pour chaque élément. Tous ces résultats sont ensuite <b>aplatis</b> (flatten) en un seul RDD. Un élément en entrée peut produire <b>0, 1 ou plusieurs</b> éléments en sortie.</p>
+          <p style="margin-top:8px;color:var(--text-faint);font-size:13px;">Exemple clé : découper une ligne de texte en mots → une ligne devient plusieurs mots.</p>
+        </div>
+        <div class="def-card wide">
+          <h4>map vs flatMap — la différence fondamentale</h4>
+          <table class="fiche-table">
+            <tr><th></th><th>map</th><th>flatMap</th></tr>
+            <tr><td>Sortie par élément</td><td>Exactement 1 résultat</td><td>0, 1 ou plusieurs résultats</td></tr>
+            <tr><td>Taille du RDD résultat</td><td>Identique à l'entrée</td><td>Différente (souvent plus grande)</td></tr>
+            <tr><td>Cas typique</td><td>Transformer chaque ligne en tuple</td><td>Découper chaque ligne en mots</td></tr>
+            <tr><td>Analogie</td><td>Appliquer un tampon sur chaque feuille</td><td>Déchirer chaque feuille en plusieurs morceaux</td></tr>
+          </table>
+          <p style="margin-top:10px;font-size:13.5px;color:var(--text-dim);">Pour le WordCount : on utilise <b>flatMap</b> pour passer de [<i>"bonjour monde"</i>, <i>"bonjour Spark"</i>] à [<i>"bonjour"</i>, <i>"monde"</i>, <i>"bonjour"</i>, <i>"Spark"</i>]. Si on avait utilisé map, on aurait obtenu une liste de listes.</p>
+        </div>
+        <div class="def-card">
+          <h4>filter(condition)</h4>
+          <p>Retourne un nouveau RDD contenant uniquement les éléments pour lesquels la condition est <b>vraie</b>. Le nombre d'éléments peut être réduit — aucun élément ne peut être ajouté.</p>
+          <p style="margin-top:8px;color:var(--text-faint);font-size:13px;">Exemple : ne garder que les commandes avec un montant supérieur à 100.</p>
+        </div>
+        <div class="def-card">
+          <h4>reduceByKey(fonction)</h4>
+          <p>Sur un RDD de paires (clé, valeur), regroupe les valeurs par clé et les <b>agrège localement sur chaque partition</b> avant de les envoyer sur le réseau. Résultat : un RDD de (clé, valeur_agrégée).</p>
+          <p style="margin-top:8px;color:var(--text-faint);font-size:13px;">Pourquoi c'est mieux que groupByKey : il réduit localement d'abord, donc beaucoup moins de données transitent sur le réseau.</p>
+        </div>
+        <div class="def-card">
+          <h4>groupByKey()</h4>
+          <p>Regroupe toutes les valeurs d'une même clé ensemble, mais envoie <b>toutes les valeurs brutes</b> sur le réseau avant de les regrouper. Très coûteux en bande passante et peut provoquer des erreurs mémoire sur des gros volumes.</p>
+          <p style="margin-top:8px;color:var(--text-faint);font-size:13px;">À éviter si reduceByKey peut faire le même travail.</p>
+        </div>
+        <div class="def-card wide">
+          <h4>reduceByKey vs groupByKey — pourquoi c'est crucial</h4>
+          <p>Imaginons 1 million de lignes avec la clé "France". Avec <b>groupByKey</b>, toutes les valeurs liées à "France" (1 million) transitent sur le réseau vers un seul reducer. Avec <b>reduceByKey</b>, chaque partition réduit localement ses valeurs "France" d'abord (ex : somme partielle), et seul le résultat partiel (1 nombre) transite vers le reducer final. Le gain peut être de plusieurs ordres de grandeur.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACTIONS -->
+    <div class="fiche-section">
+      <h2>Actions — ce qui déclenche l'exécution</h2>
+      <p class="desc">Une action demande un résultat concret à Spark — c'est le signal qui déclenche l'exécution du DAG entier.</p>
+      <div class="card-grid">
+        <div class="def-card">
+          <h4>collect()</h4>
+          <p>Ramène <b>toutes</b> les données du cluster vers le Driver. À utiliser avec précaution sur les gros volumes — peut saturer la mémoire du Driver si le RDD est trop grand.</p>
+        </div>
+        <div class="def-card">
+          <h4>count()</h4>
+          <p>Retourne le nombre d'éléments total dans le RDD/DataFrame. Simple mais déclenche un calcul complet sur tout le cluster.</p>
+        </div>
+        <div class="def-card">
+          <h4>take(n)</h4>
+          <p>Retourne les <b>n premiers éléments</b> au Driver. Beaucoup plus sûr que collect() pour inspecter un échantillon de données sans risquer de saturer la mémoire.</p>
+        </div>
+        <div class="def-card">
+          <h4>show(n)</h4>
+          <p>Affiche les n premières lignes d'un DataFrame sous forme de tableau. Équivalent de take() mais formaté — spécifique aux DataFrames.</p>
+        </div>
+        <div class="def-card">
+          <h4>saveAsTextFile(path)</h4>
+          <p>Écrit le RDD dans un fichier texte (sur HDFS ou le système local). Chaque partition produit un fichier séparé dans le répertoire cible.</p>
+        </div>
+        <div class="def-card">
+          <h4>first()</h4>
+          <p>Retourne le premier élément du RDD. Équivalent de take(1) mais retourne l'élément directement (pas une liste).</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- DAG -->
+    <div class="fiche-section">
+      <h2>DAG et Lazy Evaluation</h2>
+      <div class="card-grid">
+        <div class="def-card wide">
+          <h4>Comment ça fonctionne</h4>
+          <p>À chaque fois qu'on appelle une transformation (map, filter, flatMap...), Spark ne calcule rien. Il ajoute simplement une étape au <b>graphe orienté acyclique (DAG)</b> — un plan logique de toutes les opérations à effectuer.</p>
+          <p style="margin-top:8px;">Quand une <b>action</b> est appelée, le DAG Scheduler analyse le graphe entier et l'optimise avant de lancer l'exécution. Il peut notamment <b>fusionner des étapes</b> (stage fusion) pour éviter des shuffles inutiles.</p>
+          <p style="margin-top:8px;">En cas de panne d'un executor pendant l'exécution, Spark consulte le DAG pour savoir exactement quelles transformations rejouer depuis la dernière donnée source disponible — c'est le <b>lineage</b>.</p>
+        </div>
+        <div class="def-card">
+          <h4>Avantage de la lazy evaluation</h4>
+          <p>Spark optimise l'ensemble du pipeline <b>avant</b> de l'exécuter. Il peut supprimer des étapes inutiles, réorganiser les opérations, ou pousser des filtres plus tôt dans la chaîne pour réduire le volume de données traité. C'est impossible si chaque étape s'exécutait immédiatement.</p>
+        </div>
+        <div class="def-card">
+          <h4>Stages et shuffles</h4>
+          <p>Un <b>stage</b> est un ensemble de transformations qui peuvent s'exécuter sans échange de données entre partitions. Un <b>shuffle</b> (redistribution des données entre nœuds) marque la frontière entre deux stages. Les shuffles sont coûteux — reduceByKey en déclenche un, c'est pourquoi on le préfère à groupByKey.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- RDD vs DataFrame -->
+    <div class="fiche-section">
+      <h2>RDD vs DataFrame vs Dataset</h2>
+      <div class="card-grid">
+        <div class="def-card wide">
+          <h4>Trois API, une même infrastructure</h4>
+          <p>Les trois reposent sur le même moteur Spark Core et les mêmes partitions physiques. Ce qui change, c'est le niveau d'abstraction et les optimisations disponibles.</p>
+          <table class="fiche-table" style="margin-top:12px;">
+            <tr><th>Critère</th><th>RDD</th><th>DataFrame</th><th>Dataset[T]</th></tr>
+            <tr><td>Niveau</td><td>Bas niveau — contrôle total</td><td>Haut niveau — simplifié</td><td>Haut niveau + typage fort</td></tr>
+            <tr><td>Schéma</td><td>Aucun — données brutes</td><td>Colonnes nommées et typées</td><td>Classe case Scala/Java</td></tr>
+            <tr><td>Optimisation</td><td>Manuelle — vous gérez tout</td><td>Automatique via Catalyst</td><td>Automatique via Catalyst</td></tr>
+            <tr><td>Erreurs détectées</td><td>À l'exécution (runtime)</td><td>À l'exécution</td><td>À la compilation</td></tr>
+            <tr><td>Langues dispo</td><td>Python, Scala, Java, R</td><td>Python, Scala, Java, R</td><td>Scala / Java uniquement</td></tr>
+            <tr><td>Spark SQL</td><td>Non compatible</td><td>Oui — spark.sql()</td><td>Oui</td></tr>
+            <tr><td>Cas d'usage</td><td>Texte brut, transformations complexes non tabulaires</td><td>Données structurées — recommandé par défaut</td><td>Production Scala/Java</td></tr>
+          </table>
+        </div>
+        <div class="def-card wide">
+          <h4>La règle pratique</h4>
+          <p><b>DataFrame par défaut</b> dans 95% des cas — il bénéficie de toutes les optimisations Catalyst et est plus lisible. <b>RDD</b> uniquement quand la logique est trop complexe pour l'API haut niveau (transformations très personnalisées sur des données non structurées). <b>Dataset[T]</b> pour du Scala/Java en production avec besoin de sécurité de types à la compilation.</p>
+          <p style="margin-top:10px;">Interopérabilité : on peut passer d'un DataFrame à son RDD sous-jacent (<code>df.rdd</code>) et inversement (<code>rdd.toDF()</code>).</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCHÉMA -->
+    <div class="fiche-section">
+      <h2>Les 3 façons de définir un schéma</h2>
+      <p class="desc">La définition du schéma est une étape importante lors du chargement de données dans un DataFrame.</p>
+      <div class="card-grid">
+        <div class="def-card">
+          <h4>1. inferSchema (automatique)</h4>
+          <p>Spark <b>parcourt un échantillon des données</b> pour deviner les types de chaque colonne. Simple à mettre en place, mais présente plusieurs problèmes :</p>
+          <ul>
+            <li>Lent sur les gros fichiers (lecture supplémentaire)</li>
+            <li>Inexact : les dates sont souvent lues comme des strings</li>
+            <li>Peu fiable si les données ont des valeurs manquantes</li>
+          </ul>
+          <p style="margin-top:8px;color:var(--text-faint);font-size:13px;">À utiliser uniquement pour l'exploration rapide, jamais en production.</p>
+        </div>
+        <div class="def-card">
+          <h4>2. StructType (explicite)</h4>
+          <p>On décrit le schéma colonne par colonne via des objets Python. C'est la méthode la plus précise : on contrôle le type exact et si la colonne accepte les valeurs nulles (<code>nullable</code>).</p>
+          <ul>
+            <li>Rapide : pas de lecture préalable des données</li>
+            <li>Fiable : aucune surprise sur les types</li>
+            <li>Verbose : plus de code à écrire</li>
+          </ul>
+          <p style="margin-top:8px;color:var(--text-faint);font-size:13px;">Recommandé en production pour les pipelines critiques.</p>
+        </div>
+        <div class="def-card">
+          <h4>3. DDL String</h4>
+          <p>On décrit le schéma sous forme d'une chaîne de caractères façon SQL (comme un CREATE TABLE). Plus concis que StructType, très lisible, bien adapté aux schémas simples.</p>
+          <p style="margin-top:8px;">Exemple : <code>"id INT, nom STRING, prix DOUBLE"</code></p>
+          <ul>
+            <li>Concis et lisible</li>
+            <li>Moins de flexibilité que StructType (nullable non contrôlable)</li>
+          </ul>
+          <p style="margin-top:8px;color:var(--text-faint);font-size:13px;">Bon compromis entre lisibilité et précision.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- DATAFRAME OPÉRATIONS -->
+    <div class="fiche-section">
+      <h2>Opérations essentielles sur les DataFrames</h2>
+      <p class="desc">Les opérations clés à maîtriser, avec leur signification théorique.</p>
+      <div class="card-grid">
+        <div class="def-card">
+          <h4>select()</h4>
+          <p>Projette une ou plusieurs colonnes d'un DataFrame — équivalent du <code>SELECT</code> SQL. Retourne un nouveau DataFrame avec uniquement les colonnes demandées. On peut renommer une colonne à la volée avec <code>.alias()</code>.</p>
+          <p style="margin-top:8px;color:var(--text-faint);font-size:13px;">C'est une transformation lazy — rien n'est calculé jusqu'à une action.</p>
+        </div>
+        <div class="def-card">
+          <h4>filter() / where()</h4>
+          <p>Retourne un sous-ensemble des lignes satisfaisant une condition — équivalent du <code>WHERE</code> SQL. <code>filter()</code> et <code>where()</code> sont strictement identiques dans Spark (aliases l'un de l'autre), on choisit selon la préférence de lisibilité.</p>
+          <p style="margin-top:8px;color:var(--text-faint);font-size:13px;">Les opérateurs <code>&</code> (ET), <code>|</code> (OU), <code>~</code> (NON) permettent de combiner des conditions.</p>
+        </div>
+        <div class="def-card">
+          <h4>withColumn()</h4>
+          <p>Ajoute une nouvelle colonne calculée ou modifie une colonne existante. La colonne est définie par une expression Spark (fonctions de la bibliothèque <code>functions</code>). Retourne un nouveau DataFrame avec la colonne ajoutée ou remplacée.</p>
+          <p style="margin-top:8px;color:var(--text-faint);font-size:13px;">Utiliser <code>when() / otherwise()</code> pour les conditions (équivalent du CASE WHEN SQL).</p>
+        </div>
+        <div class="def-card">
+          <h4>groupBy().agg()</h4>
+          <p>Regroupe les lignes par une ou plusieurs colonnes (équivalent du <code>GROUP BY</code> SQL), puis applique des fonctions d'agrégation : <code>sum()</code>, <code>avg()</code>, <code>count()</code>, <code>min()</code>, <code>max()</code>. On peut combiner plusieurs agrégations dans un seul <code>agg()</code>.</p>
+        </div>
+        <div class="def-card">
+          <h4>join()</h4>
+          <p>Jointure entre deux DataFrames sur une ou plusieurs colonnes communes. Types disponibles : <b>inner</b> (seules les lignes correspondantes), <b>left</b> (toutes les lignes gauche), <b>right</b>, <b>outer</b> (toutes les lignes des deux), <b>semi</b> (lignes gauche qui ont une correspondance), <b>anti</b> (lignes gauche sans correspondance).</p>
+        </div>
+        <div class="def-card">
+          <h4>Broadcast join</h4>
+          <p>Optimisation importante : quand une des deux tables est petite (moins de ~30 Mo), on peut envoyer une copie complète à chaque executor. Cela évite un shuffle massif car chaque executor peut faire la jointure localement. Sans broadcast, Spark redistribue les deux tables sur le réseau — très coûteux.</p>
+        </div>
+        <div class="def-card wide">
+          <h4>Spark SQL — même résultat que l'API DataFrame</h4>
+          <p>Spark SQL permet d'interroger un DataFrame enregistré comme vue temporaire avec du SQL standard. Point important : <b>l'API DataFrame et Spark SQL produisent exactement le même plan d'exécution</b>, car les deux passent par l'optimiseur Catalyst. Il n'y a donc aucune différence de performance — on choisit selon la lisibilité du code et les habitudes de l'équipe.</p>
+          <pre class="code-block">df.createOrReplaceTempView(<span class="s">"ventes"</span>)
+spark.sql(<span class="s">"SELECT region, SUM(montant) FROM ventes GROUP BY region"</span>)</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- PARTITIONNEMENT ET CACHE -->
+    <div class="fiche-section">
+      <h2>Partitionnement &amp; Cache / Persistance</h2>
+      <div class="card-grid">
+        <div class="def-card wide">
+          <h4>Partitionnement — contrôler le parallélisme</h4>
+          <p>Le partitionnement détermine comment les données sont réparties physiquement entre les executors. C'est le levier principal pour optimiser les performances :</p>
+          <table class="fiche-table" style="margin-top:10px;">
+            <tr><th>Opération</th><th>Comportement</th><th>Quand l'utiliser</th></tr>
+            <tr><td><b>repartition(n)</b></td><td>Effectue un <b>shuffle complet</b> et redistribue les données en n partitions équilibrées</td><td>Pour augmenter le nombre de partitions ou rééquilibrer des partitions déséquilibrées</td></tr>
+            <tr><td><b>coalesce(n)</b></td><td>Réduit le nombre de partitions <b>sans shuffle</b>, en fusionnant des partitions voisines</td><td>Pour réduire le nombre de partitions (plus efficace que repartition car pas de shuffle)</td></tr>
+            <tr><td><b>repartition(n, col)</b></td><td>Redistribue en partitionnant par les valeurs d'une colonne</td><td>Pour optimiser des jointures futures sur cette colonne</td></tr>
+          </table>
+          <p style="margin-top:10px;"><b>Règle pratique :</b> viser 2 à 4 partitions par cœur CPU disponible dans le cluster.</p>
+        </div>
+        <div class="def-card wide">
+          <h4>Cache et persistance — éviter de recalculer</h4>
+          <p>Par défaut, Spark recalcule un RDD ou DataFrame à chaque action qui le demande. Si le même dataset est utilisé plusieurs fois dans le code (typiquement en ML itératif), ce recalcul est inutile et coûteux. La solution : <b>mettre en cache</b> le résultat après le premier calcul.</p>
+          <table class="fiche-table" style="margin-top:10px;">
+            <tr><th>Niveau</th><th>Comportement</th><th>Risque</th></tr>
+            <tr><td><b>MEMORY_ONLY</b></td><td>Stocké uniquement en RAM — le plus rapide</td><td>Si la RAM est insuffisante, les partitions ne tenant pas en mémoire sont recalculées à chaque accès</td></tr>
+            <tr><td><b>MEMORY_AND_DISK</b></td><td>En RAM d'abord, débordement sur disque si nécessaire</td><td>Minimal — recommandé en production</td></tr>
+            <tr><td><b>DISK_ONLY</b></td><td>Uniquement sur disque</td><td>Lent mais utile si la RAM est très limitée</td></tr>
+          </table>
+          <p style="margin-top:10px;"><code>cache()</code> est un raccourci pour <code>persist(MEMORY_ONLY)</code>. Toujours appeler <code>unpersist()</code> quand le cache n'est plus nécessaire pour libérer la mémoire.</p>
+          <div class="warn-box" style="margin-top:10px;">
+            <span>⚠️</span>
+            <span><b>Ne pas abuser du cache :</b> mettre en cache un dataset qui n'est utilisé qu'une seule fois est inutile et gaspille de la mémoire. Cache uniquement ce qui est réutilisé.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BONNE PRATIQUES -->
+    <div class="fiche-section">
+      <h2>Bonnes pratiques et formats de fichiers</h2>
+      <div class="card-grid">
+        <div class="def-card">
+          <h4>Toujours définir le schéma explicitement</h4>
+          <p>En production, éviter <code>inferSchema=True</code>. Un schéma explicite (StructType ou DDL string) est plus rapide au chargement, fiable sur les types, et évite les mauvaises surprises en production.</p>
+        </div>
+        <div class="def-card">
+          <h4>Format Parquet pour l'écriture</h4>
+          <p>Parquet est un format de fichier <b>colonnaire et compressé</b>, idéal pour Spark : on lit uniquement les colonnes nécessaires (pas toute la ligne), il compresse efficacement les données, et supporte le partition pruning. À préférer au CSV en production.</p>
+        </div>
+        <div class="def-card">
+          <h4>Écriture partitionnée</h4>
+          <p>On peut écrire un DataFrame en le partitionnant par une ou plusieurs colonnes (ex: année, mois). Cela crée une arborescence de dossiers. Avantage : les requêtes ultérieures filtrant sur ces colonnes ne liront que les partitions concernées (pruning).</p>
+        </div>
+        <div class="def-card">
+          <h4>Modes d'écriture</h4>
+          <table class="fiche-table">
+            <tr><th>Mode</th><th>Comportement</th></tr>
+            <tr><td>overwrite</td><td>Écrase si le fichier existe</td></tr>
+            <tr><td>append</td><td>Ajoute aux données existantes</td></tr>
+            <tr><td>ignore</td><td>Ne fait rien si le fichier existe</td></tr>
+            <tr><td>error (défaut)</td><td>Lève une erreur si le fichier existe</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===================== FLASHCARDS ===================== -->
+  <div class="tab-panel" id="t-flash">
+    <div class="fc-toolbar">
+      <span class="fc-progress" id="fc-progress">Carte 1 sur 1</span>
+      <button class="fc-btn" id="fc-shuffle">🔀 Mélanger</button>
+    </div>
+    <div class="fc-stage" id="fc-stage"></div>
+    <div class="fc-nav" style="justify-content:center;margin-top:18px;">
+      <button class="fc-btn" id="fc-prev">← Précédent</button>
+      <span class="count" id="fc-count">1 / 1</span>
+      <button class="fc-btn" id="fc-next">Suivant →</button>
+    </div>
+  </div>
+
+  <!-- ===================== QCM ===================== -->
+  <div class="tab-panel" id="t-qcm">
+    <div id="qcm-root"></div>
+  </div>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>bigdata-prep · Module 02 — Apache Spark</p>
+    <p><a href="index.html">← Retour à l'accueil</a></p>
+  </div>
+</footer>
+
+<script>
+window.QCM_ACCENT = '#8b7cf6';
+
+window.FLASHCARDS = [
+  {tag:'spark', tagLabel:'Architecture', q:"Citez les 5 composants de l'architecture Spark et le rôle de chacun.", a:"Driver Program : contient la logique applicative écrite par le développeur. SparkContext : point d'entrée qui coordonne le cluster. Cluster Manager : gère les ressources physiques (YARN, Kubernetes, Standalone). Executor : processus JVM sur chaque nœud worker qui exécute les tâches. Task : unité minimale de travail traitant une partition."},
+  {tag:'spark', tagLabel:'RDD', q:"Qu'est-ce qu'un RDD ? Expliquez chacune de ses 5 propriétés.", a:"Resilient : reconstruit automatiquement via le lineage en cas de panne. Distributed : données partitionnées sur plusieurs nœuds du cluster. Dataset : collection de données typées. Immuable : toute transformation produit un nouveau RDD, l'original reste intact. Lazy : aucun calcul tant qu'une action n'est pas appelée."},
+  {tag:'spark', tagLabel:'RDD', q:"Quelle est la différence entre map et flatMap ? Donnez un exemple concret.", a:"map applique une fonction à chaque élément et retourne exactement 1 résultat par élément — la taille du RDD ne change pas. flatMap applique une fonction qui retourne une liste pour chaque élément, puis aplatit tous les résultats — un élément peut produire 0, 1 ou plusieurs résultats. Exemple concret : pour découper des lignes de texte en mots individuels, on utilise flatMap (chaque ligne → plusieurs mots). Si on utilisait map, on obtiendrait une liste de listes."},
+  {tag:'spark', tagLabel:'RDD', q:"Pourquoi faut-il préférer reduceByKey à groupByKey ? Expliquez le mécanisme.", a:"reduceByKey réduit les valeurs localement sur chaque partition AVANT de les envoyer sur le réseau. Seuls les résultats partiels transitent. groupByKey envoie TOUTES les valeurs brutes sur le réseau avant d'agréger — sur 1 million de lignes avec la même clé, 1 million de valeurs transitent au lieu d'une. Le gain peut être de plusieurs ordres de grandeur en bande passante et temps d'exécution."},
+  {tag:'spark', tagLabel:'Transformations', q:"Quelle est la différence entre une transformation et une action dans Spark ? Donnez 3 exemples de chaque.", a:"Une transformation est lazy : elle construit le DAG sans rien calculer (map, filter, flatMap, reduceByKey, groupByKey...). Une action est eager : elle déclenche l'exécution du DAG entier et retourne un résultat au Driver (collect, count, take, show, saveAsTextFile, first...). Sans action, aucun calcul n'a jamais lieu."},
+  {tag:'spark', tagLabel:'DAG', q:"Qu'est-ce que le DAG dans Spark, qu'est-ce que le lineage, et quel lien y a-t-il entre les deux ?", a:"Le DAG (Directed Acyclic Graph) est le graphe orienté acyclique de toutes les transformations appliquées. Il représente le plan logique du calcul. Le lineage est l'information stockée dans ce DAG qui permet de savoir comment reconstruire chaque partition depuis la source. En cas de panne d'un executor, Spark consulte le lineage pour rejouer uniquement les transformations nécessaires à reconstruire les partitions perdues."},
+  {tag:'spark', tagLabel:'DataFrame', q:"Comparez RDD, DataFrame et Dataset sur le schéma, l'optimisation et les langages supportés.", a:"RDD : pas de schéma (données brutes), optimisation manuelle, Python/Scala/Java/R. DataFrame : schéma avec colonnes nommées et typées, optimisation automatique via Catalyst, Python/Scala/Java/R, compatible Spark SQL. Dataset[T] : schéma fort typé via classe case, optimisation automatique via Catalyst, Scala/Java uniquement, erreurs détectées à la compilation."},
+  {tag:'spark', tagLabel:'Schéma', q:"Quelles sont les 3 façons de définir un schéma dans Spark ? Laquelle recommander en production et pourquoi ?", a:"1. inferSchema=True : automatique, mais lent (lecture supplémentaire) et inexact (dates lues comme strings). 2. StructType avec StructField : précis, rapide, contrôle du nullable — recommandé en production. 3. DDL string (ex: 'id INT, nom STRING') : concis et lisible, bon compromis. En production, éviter inferSchema : un pipeline critique ne doit pas dépendre d'une inférence de types qui peut varier selon les données."},
+  {tag:'spark', tagLabel:'Partitionnement', q:"Expliquez la différence entre repartition() et coalesce(), et quand utiliser l'un ou l'autre.", a:"repartition(n) effectue un shuffle complet et redistribue les données en n partitions équilibrées — utiliser pour augmenter le nombre de partitions ou corriger un déséquilibre. coalesce(n) réduit les partitions sans shuffle en fusionnant des partitions voisines — utiliser uniquement pour réduire (plus efficace car pas de transfert réseau). La règle de base : 2 à 4 partitions par cœur CPU disponible."},
+  {tag:'spark', tagLabel:'Cache', q:"Quand faut-il utiliser cache() ou persist() ? Quelle est la différence entre MEMORY_ONLY et MEMORY_AND_DISK ?", a:"Utiliser le cache uniquement si un RDD/DataFrame est réutilisé plusieurs fois (typiquement dans les algorithmes ML itératifs). Cache() = persist(MEMORY_ONLY) : tout en RAM, le plus rapide, mais si la RAM est insuffisante les partitions sont recalculées à chaque accès. persist(MEMORY_AND_DISK) : déborde sur disque si la RAM est pleine — plus sécurisé, recommandé en production. Toujours unpersist() quand le cache n'est plus nécessaire."},
+  {tag:'spark', tagLabel:'Join', q:"Qu'est-ce qu'un broadcast join et dans quel cas l'utiliser ?", a:"Le broadcast join envoie une copie complète d'une petite table à chaque executor. Chaque executor peut alors faire la jointure localement, sans aucun shuffle (transfert de données entre nœuds). À utiliser quand une des deux tables fait moins de ~30 Mo environ. Sans broadcast, Spark redistribue les deux tables sur le réseau — très coûteux sur de gros volumes."},
+  {tag:'spark', tagLabel:'SQL', q:"Spark SQL et l'API DataFrame produisent-ils des plans d'exécution différents ? Comment choisir entre les deux ?", a:"Non — les deux passent par le même optimiseur Catalyst et produisent exactement le même plan d'exécution. Il n'y a aucune différence de performance. On choisit selon la lisibilité : SQL pour les équipes habituées au SQL ou les agrégations complexes, l'API DataFrame pour les transformations programmatiques et les pipelines dynamiques."},
+];
+
+window.QCM = [
+  {type:'tf', q:"Spark écrit les résultats intermédiaires entre chaque étape sur le disque, comme MapReduce.", opts:["Vrai","Faux"], correct:[1], explain:"Faux. C'est exactement ce que Spark améliore par rapport à MapReduce : les résultats intermédiaires restent en mémoire (RAM). Cela le rend 10 à 100× plus rapide pour les traitements itératifs.", theme:"Vue d'ensemble"},
+  {type:'single', q:"Quelle est la différence fondamentale entre map() et flatMap() ?", opts:["map() est plus rapide que flatMap()","map() retourne 1 élément par élément en entrée, flatMap() peut retourner 0, 1 ou plusieurs éléments","flatMap() fonctionne uniquement sur des paires clé-valeur","map() ne fonctionne pas sur les DataFrames"], correct:[1], explain:"map() est une transformation 1-pour-1 : chaque élément produit exactement 1 résultat, la taille du RDD ne change pas. flatMap() applique une fonction qui retourne une liste pour chaque élément, puis aplatit tous les résultats — idéal pour découper des lignes en mots.", theme:"Transformations"},
+  {type:'multi', q:"Parmi ces opérations Spark, lesquelles sont des transformations (lazy) ?", opts:["map()","count()","filter()","collect()","reduceByKey()"], correct:[0,2,4], explain:"map(), filter() et reduceByKey() sont des transformations lazy : elles construisent le DAG sans rien calculer. count() et collect() sont des actions qui déclenchent l'exécution du DAG.", theme:"Transformations vs Actions"},
+  {type:'single', q:"Pourquoi reduceByKey() est-il préférable à groupByKey() ?", opts:["Il est plus facile à lire","Il réduit les données localement sur chaque partition avant le shuffle, réduisant le transfert réseau","Il produit des partitions plus équilibrées","Il est compatible avec les DataFrames"], correct:[1], explain:"groupByKey() envoie toutes les valeurs brutes sur le réseau avant d'agréger. reduceByKey() agrège localement d'abord, seuls les résultats partiels transitent. Sur 1 million de lignes avec la même clé, c'est la différence entre 1 million et 1 valeur qui transitent.", theme:"RDD — Transformations"},
+  {type:'single', q:"Quelle méthode de définition de schéma est recommandée en production ?", opts:["inferSchema=True uniquement","StructType avec StructField ou DDL string (schéma explicite)","Laisser Spark deviner automatiquement à chaque exécution","Importer le schéma depuis un fichier Pandas"], correct:[1], explain:"inferSchema parcourt les données pour deviner les types — lent et parfois inexact (dates lues comme strings). En production, on définit le schéma explicitement via StructType ou DDL string pour garantir rapidité, fiabilité et reproductibilité.", theme:"Schéma"},
+  {type:'tf', q:"filter() et where() sont deux méthodes différentes avec des comportements légèrement distincts dans Spark.", opts:["Vrai","Faux"], correct:[1], explain:"Faux. filter() et where() sont des aliases stricts l'un de l'autre dans Spark — ils produisent exactement le même résultat. On choisit selon la préférence de lisibilité : where() est plus naturel pour ceux qui viennent du SQL.", theme:"DataFrame"},
+  {type:'single', q:"Qu'est-ce que le lineage dans Spark et à quoi sert-il ?", opts:["La liste des partitions d'un RDD","L'historique des jobs exécutés sur le cluster","Le graphe de toutes les transformations permettant de reconstruire une partition perdue en cas de panne","Le schéma des colonnes d'un DataFrame"], correct:[2], explain:"Le lineage est le graphe de dépendances conservé dans le DAG. En cas de panne d'un executor, Spark rejoue uniquement les transformations nécessaires pour reconstruire les partitions perdues depuis la dernière source disponible — sans checkpoint explicite.", theme:"DAG & Tolérance aux pannes"},
+  {type:'multi', q:"Parmi ces affirmations sur le cache Spark, lesquelles sont vraies ?", opts:["cache() est un alias de persist(MEMORY_ONLY)","On doit toujours mettre en cache tous les DataFrames","persist(MEMORY_AND_DISK) déborde sur disque si la RAM est insuffisante","unpersist() libère la mémoire occupée par le cache"], correct:[0,2,3], explain:"cache() = persist(MEMORY_ONLY). On ne met en cache que ce qui est réutilisé plusieurs fois — mettre en cache un dataset utilisé une seule fois gaspille de la mémoire. persist(MEMORY_AND_DISK) est plus sécurisé. unpersist() est essentiel pour libérer les ressources.", theme:"Cache"},
+  {type:'single', q:"Quelle est la règle de base pour le nombre de partitions dans Spark ?", opts:["Toujours 10 partitions par défaut","1 partition par nœud du cluster","2 à 4 partitions par cœur CPU disponible","Le même nombre que les blocs HDFS"], correct:[2], explain:"La règle pratique est de viser 2 à 4 partitions par cœur CPU disponible dans le cluster. Trop peu de partitions → certains executors sont inactifs (sous-utilisation). Trop de partitions → surcharge de coordination (overhead de scheduling).", theme:"Partitionnement"},
+  {type:'single', q:"Spark SQL et l'API DataFrame produisent-ils des plans d'exécution différents ?", opts:["Oui, Spark SQL est toujours plus rapide","Oui, l'API DataFrame est toujours plus rapide","Non, les deux passent par l'optimiseur Catalyst et produisent le même plan","Cela dépend de la version de Spark"], correct:[2], explain:"Les deux API sont traitées par le même optimiseur Catalyst et produisent exactement le même plan d'exécution. Il n'y a aucune différence de performance — on choisit selon la lisibilité du code.", theme:"Spark SQL"},
+  {type:'single', q:"Dans un broadcast join, que se passe-t-il concrètement ?", opts:["Les deux tables sont redistribuées sur tous les nœuds","Une copie de la petite table est envoyée à chaque executor — la jointure se fait localement sans shuffle","La grande table est découpée et envoyée à chaque executor","Les deux tables sont fusionnées sur le coordinateur"], correct:[1], explain:"Le broadcast envoie une copie complète de la petite table à chaque executor. Chaque executor fait ensuite la jointure localement avec ses propres partitions de la grande table, sans aucun transfert réseau entre nœuds (pas de shuffle).", theme:"DataFrame — Joins"},
+  {type:'multi', q:"Parmi ces composants, lesquels font partie de l'écosystème Spark ?", opts:["Spark SQL","HDFS","Structured Streaming","MLlib","GraphX"], correct:[0,2,3,4], explain:"HDFS est un composant Hadoop (stockage), pas Spark — Spark peut lire depuis HDFS mais ce n'est pas un composant Spark. L'écosystème Spark comprend Spark Core, Spark SQL, Structured Streaming, MLlib et GraphX.", theme:"Écosystème"},
+];
+</script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Docker — bigdata-prep</title>
+<link rel="stylesheet" href="style.css">
+<style>:root{--accent:var(--docker);}</style>
+</head>
+<body data-mod="docker">
+<div class="node-field"></div>
+
+<header class="topbar">
+  <div class="wrap">
+    <div class="brand"><span class="dot" style="background:var(--docker)"></span>bigdata-prep</div>
+    <nav class="nav-links">
+      <a href="index.html">Accueil</a>
+      <a href="hadoop.html">Hadoop</a>
+      <a href="spark.html">Spark</a>
+      <a href="spark-extensions.html">Extensions</a>
+      <a href="postgres-distribue.html">Postgres&nbsp;distribué</a>
+      <a href="docker.html" class="active">Docker</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="page-hero">
+    <span class="chip docker">Module 05 · Docker</span>
+    <h1 class="page-title" style="margin-top:14px;">Docker</h1>
+    <p class="page-sub">La brique d'orchestration des clusters distribués : conteneurs, images, volumes, réseaux,
+    et Docker Compose — la technologie utilisée pour simuler un cluster Citus dans le TP.</p>
+  </section>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="t-fiches">📄 Fiches</button>
+    <button class="tab-btn" data-tab="t-flash">🃏 Flashcards</button>
+    <button class="tab-btn" data-tab="t-qcm">🎯 QCM</button>
+  </div>
+
+  <!-- ===================== FICHES ===================== -->
+  <div class="tab-panel active" id="t-fiches">
+
+    <div class="fiche-section">
+      <h2>Conteneurs vs Machines Virtuelles</h2>
+      <div class="card-grid">
+        <div class="def-card wide">
+          <table class="fiche-table">
+            <tr><th>Critère</th><th>Machine Virtuelle (VM)</th><th>Conteneur Docker</th></tr>
+            <tr><td>Isolation</td><td>OS complet virtualisé</td><td>Partage le kernel de l'hôte</td></tr>
+            <tr><td>Poids</td><td>Plusieurs Go</td><td>Quelques Mo à centaines de Mo</td></tr>
+            <tr><td>Démarrage</td><td>Minutes</td><td>Secondes ou moins</td></tr>
+            <tr><td>Performance</td><td>Surcoût hyperviseur</td><td>Quasi-native</td></tr>
+            <tr><td>Isolation réseau</td><td>Complète</td><td>Configurable (networks Docker)</td></tr>
+            <tr><td>Portabilité</td><td>Limitée</td><td>Haute — "runs anywhere"</td></tr>
+          </table>
+        </div>
+        <div class="def-card wide">
+          <h4>Définition Docker</h4>
+          <p>Plateforme de conteneurisation permettant de packager une application et ses dépendances dans un conteneur léger, portable et reproductible. Chaque conteneur a son propre système de fichiers, ses propres processus et son propre réseau — sans VM complète.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="fiche-section">
+      <h2>Concepts fondamentaux</h2>
+      <div class="card-grid">
+        <div class="def-card">
+          <h4>Image</h4>
+          <p>Modèle en lecture seule décrivant un système de fichiers et ses métadonnées. Construite depuis un <b>Dockerfile</b>. Immuable — chaque modification crée un nouveau layer.</p>
+          <p style="margin-top:8px;font-size:13px;color:var(--text-faint);">Ex : <code>postgres:15</code>, <code>citusdata/citus</code>, <code>python:3.11</code></p>
+        </div>
+        <div class="def-card">
+          <h4>Conteneur</h4>
+          <p>Instance en cours d'exécution d'une image. Léger, isolé, éphémère par défaut. Plusieurs conteneurs peuvent tourner depuis la même image.</p>
+        </div>
+        <div class="def-card">
+          <h4>Volume</h4>
+          <p>Mécanisme de persistance des données en dehors du cycle de vie du conteneur. Un conteneur supprimé sans volume perd toutes ses données.</p>
+          <div class="badge-row">
+            <span class="mini-badge">Named volume</span>
+            <span class="mini-badge">Bind mount</span>
+          </div>
+        </div>
+        <div class="def-card">
+          <h4>Réseau (Network)</h4>
+          <p>Les conteneurs sur le même réseau Docker se voient par leur <b>nom de service</b> (DNS interne). Isolés des conteneurs hors du réseau.</p>
+          <div class="badge-row">
+            <span class="mini-badge">bridge (défaut)</span>
+            <span class="mini-badge">host</span>
+            <span class="mini-badge">overlay (Swarm)</span>
+          </div>
+        </div>
+        <div class="def-card">
+          <h4>Registry</h4>
+          <p>Dépôt d'images Docker. Docker Hub est le registry public par défaut. On peut aussi utiliser un registry privé (AWS ECR, GitLab Registry...).</p>
+        </div>
+        <div class="def-card">
+          <h4>Layer</h4>
+          <p>Chaque instruction d'un Dockerfile crée un layer (couche). Les layers sont mis en cache et partagés entre images — ce qui rend les builds et les téléchargements très efficaces.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="fiche-section">
+      <h2>Dockerfile — instructions clés</h2>
+      <div class="card-grid">
+        <div class="def-card wide">
+          <h4>Exemple de Dockerfile</h4>
+          <pre class="code-block"><span class="c"># Image de base</span>
+<span class="k">FROM</span> python:3.11-slim
+
+<span class="c"># Métadonnées</span>
+<span class="k">LABEL</span> maintainer=<span class="s">"bigdata-prep"</span>
+
+<span class="c"># Répertoire de travail dans le conteneur</span>
+<span class="k">WORKDIR</span> /app
+
+<span class="c"># Copier les fichiers de dépendances</span>
+<span class="k">COPY</span> requirements.txt .
+
+<span class="c"># Installer les dépendances</span>
+<span class="k">RUN</span> pip install --no-cache-dir -r requirements.txt
+
+<span class="c"># Copier le code source</span>
+<span class="k">COPY</span> . .
+
+<span class="c"># Port exposé par le conteneur</span>
+<span class="k">EXPOSE</span> 8080
+
+<span class="c"># Commande exécutée au démarrage</span>
+<span class="k">CMD</span> [<span class="s">"python"</span>, <span class="s">"app.py"</span>]</pre>
+        </div>
+        <div class="def-card wide">
+          <h4>Instructions Dockerfile essentielles</h4>
+          <table class="fiche-table">
+            <tr><th>Instruction</th><th>Rôle</th></tr>
+            <tr><td><code>FROM</code></td><td>Image de base (obligatoire, première instruction)</td></tr>
+            <tr><td><code>WORKDIR</code></td><td>Répertoire de travail pour les commandes suivantes</td></tr>
+            <tr><td><code>COPY</code></td><td>Copie des fichiers de l'hôte vers le conteneur</td></tr>
+            <tr><td><code>RUN</code></td><td>Exécute une commande lors du build (crée un layer)</td></tr>
+            <tr><td><code>ENV</code></td><td>Définit une variable d'environnement</td></tr>
+            <tr><td><code>EXPOSE</code></td><td>Documente le port (ne l'ouvre pas réellement)</td></tr>
+            <tr><td><code>CMD</code></td><td>Commande par défaut au démarrage du conteneur (remplaçable)</td></tr>
+            <tr><td><code>ENTRYPOINT</code></td><td>Commande fixe au démarrage (non remplaçable)</td></tr>
+            <tr><td><code>VOLUME</code></td><td>Déclare un point de montage pour la persistance</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="fiche-section">
+      <h2>Commandes Docker essentielles</h2>
+      <div class="card-grid">
+        <div class="def-card wide">
+          <h4>Gestion des images</h4>
+          <pre class="code-block"><span class="c"># Builder une image depuis le Dockerfile du dossier courant</span>
+docker build -t mon-app:v1 .
+
+<span class="c"># Lister les images locales</span>
+docker images
+
+<span class="c"># Supprimer une image</span>
+docker rmi mon-app:v1
+
+<span class="c"># Télécharger une image depuis Docker Hub</span>
+docker pull postgres:15</pre>
+        </div>
+        <div class="def-card wide">
+          <h4>Gestion des conteneurs</h4>
+          <pre class="code-block"><span class="c"># Lancer un conteneur (détaché, port mappé)</span>
+docker run -d -p 5432:5432 --name pg-local postgres:15
+
+<span class="c"># Lister les conteneurs actifs</span>
+docker ps
+
+<span class="c"># Lister tous les conteneurs (actifs + stoppés)</span>
+docker ps -a
+
+<span class="c"># Arrêter / supprimer un conteneur</span>
+docker stop pg-local
+docker rm pg-local
+
+<span class="c"># Exécuter une commande dans un conteneur actif</span>
+docker exec -it pg-local psql -U postgres
+
+<span class="c"># Afficher les logs d'un conteneur</span>
+docker logs pg-local
+
+<span class="c"># Inspecter un conteneur (réseau, volumes, config)</span>
+docker inspect pg-local</pre>
+        </div>
+        <div class="def-card wide">
+          <h4>Volumes et réseaux</h4>
+          <pre class="code-block"><span class="c"># Créer un volume nommé</span>
+docker volume create pg-data
+
+<span class="c"># Lancer un conteneur avec un volume</span>
+docker run -d -v pg-data:/var/lib/postgresql/data postgres:15
+
+<span class="c"># Créer un réseau interne</span>
+docker network create mon-reseau
+
+<span class="c"># Connecter un conteneur à un réseau</span>
+docker run -d --network mon-reseau --name worker1 postgres:15</pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="fiche-section">
+      <h2>Docker Compose</h2>
+      <div class="card-grid">
+        <div class="def-card wide">
+          <h4>Définition</h4>
+          <p>Outil permettant de décrire et lancer un ensemble de conteneurs dans un fichier YAML (<code>docker-compose.yml</code>). Indispensable pour orchestrer un cluster multi-conteneurs comme Citus (coordinateur + workers).</p>
+        </div>
+        <div class="def-card wide">
+          <h4>Exemple — Cluster Citus (coordinateur + 2 workers)</h4>
+          <pre class="code-block"><span class="c"># docker-compose.yml</span>
+version: <span class="s">'3.8'</span>
+
+services:
+  coordinator:
+    image: citusdata/citus:12.1
+    ports:
+      - <span class="s">"5432:5432"</span>
+    environment:
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - coordinator-data:/var/lib/postgresql/data
+    networks:
+      - citus-net
+
+  worker1:
+    image: citusdata/citus:12.1
+    environment:
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - worker1-data:/var/lib/postgresql/data
+    networks:
+      - citus-net
+
+  worker2:
+    image: citusdata/citus:12.1
+    environment:
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - worker2-data:/var/lib/postgresql/data
+    networks:
+      - citus-net
+
+volumes:
+  coordinator-data:
+  worker1-data:
+  worker2-data:
+
+networks:
+  citus-net:
+    driver: bridge</pre>
+        </div>
+        <div class="def-card wide">
+          <h4>Commandes Docker Compose essentielles</h4>
+          <pre class="code-block"><span class="c"># Démarrer tous les services (en arrière-plan)</span>
+docker compose up -d
+
+<span class="c"># Afficher l'état des services</span>
+docker compose ps
+
+<span class="c"># Voir les logs de tous les services</span>
+docker compose logs -f
+
+<span class="c"># Exécuter une commande dans un service</span>
+docker compose exec coordinator psql -U postgres
+
+<span class="c"># Arrêter les services (sans supprimer)</span>
+docker compose stop
+
+<span class="c"># Arrêter et supprimer les conteneurs + réseaux</span>
+docker compose down
+
+<span class="c"># Arrêter + supprimer volumes (données perdues !)</span>
+docker compose down -v</pre>
+        </div>
+        <div class="def-card">
+          <h4>DNS interne Docker</h4>
+          <p>Dans un réseau Docker Compose, chaque service est accessible par son <b>nom de service</b>. Dans le cluster Citus, le coordinateur accède aux workers via <code>worker1</code> et <code>worker2</code> — sans adresse IP.</p>
+        </div>
+        <div class="def-card">
+          <h4>Docker Swarm</h4>
+          <p>Mode d'orchestration natif Docker pour plusieurs machines physiques. Un <b>Swarm manager</b> orchestre des <b>Docker daemons</b> sur plusieurs nœuds. Plus simple que Kubernetes mais moins puissant.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="fiche-section">
+      <h2>Docker dans le contexte du cours</h2>
+      <div class="card-grid">
+        <div class="def-card wide">
+          <h4>Lien avec Citus</h4>
+          <p>Le TP Citus utilise Docker Compose pour simuler un cluster distribué sur une seule machine : un conteneur coordinateur et N conteneurs workers, tous sur le même réseau interne Docker (<code>citus-net</code>). Le coordinateur enregistre les workers via <code>citus_add_node('worker1', 5432)</code> — Docker résout le nom <code>worker1</code> en adresse IP interne automatiquement.</p>
+        </div>
+        <div class="def-card wide">
+          <h4>Avantages de Docker pour les clusters de test</h4>
+          <ul>
+            <li>Reproducible : même environnement sur toutes les machines</li>
+            <li>Léger : pas besoin de 3 machines physiques ou VMs</li>
+            <li>Propre : <code>docker compose down -v</code> supprime tout sans laisser de traces</li>
+            <li>Rapide à démarrer : secondes, pas minutes</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===================== FLASHCARDS ===================== -->
+  <div class="tab-panel" id="t-flash">
+    <div class="fc-toolbar">
+      <span class="fc-progress" id="fc-progress">Carte 1 sur 1</span>
+      <button class="fc-btn" id="fc-shuffle">🔀 Mélanger</button>
+    </div>
+    <div class="fc-stage" id="fc-stage"></div>
+    <div class="fc-nav" style="justify-content:center;margin-top:18px;">
+      <button class="fc-btn" id="fc-prev">← Précédent</button>
+      <span class="count" id="fc-count">1 / 1</span>
+      <button class="fc-btn" id="fc-next">Suivant →</button>
+    </div>
+  </div>
+
+  <!-- ===================== QCM ===================== -->
+  <div class="tab-panel" id="t-qcm">
+    <div id="qcm-root"></div>
+  </div>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>bigdata-prep · Module 05 — Docker</p>
+    <p><a href="index.html">← Retour à l'accueil</a></p>
+  </div>
+</footer>
+
+<script>
+window.QCM_ACCENT = '#4aa8ff';
+
+window.FLASHCARDS = [
+  {tag:'docker', tagLabel:'Concepts', q:"Quelle est la différence fondamentale entre une image et un conteneur Docker ?", a:"Une image est un modèle en lecture seule (blueprint) décrivant un système de fichiers et ses métadonnées — elle est immuable. Un conteneur est une instance en cours d'exécution de cette image — il est vivant, modifiable pendant son exécution, et éphémère par défaut. Plusieurs conteneurs peuvent tourner depuis la même image."},
+  {tag:'docker', tagLabel:'Concepts', q:"Pourquoi un conteneur Docker est-il plus léger et plus rapide qu'une VM ?", a:"Une VM embarque un OS complet virtualisé par un hyperviseur, ce qui coûte en ressources et en temps de démarrage (minutes). Un conteneur partage le kernel de l'OS hôte et n'embarque que les dépendances applicatives nécessaires. Il démarre en secondes, consomme bien moins de RAM/disque, avec des performances quasi-natives."},
+  {tag:'docker', tagLabel:'Concepts', q:"À quoi servent les volumes Docker et pourquoi sont-ils importants ?", a:"Par défaut, toutes les données écrites dans un conteneur sont perdues quand il est supprimé. Les volumes sont des espaces de stockage persistants en dehors du cycle de vie du conteneur. Ils permettent de conserver les données (ex: la base PostgreSQL) même si le conteneur est recréé ou mis à jour."},
+  {tag:'docker', tagLabel:'Dockerfile', q:"Quelle est la différence entre CMD et ENTRYPOINT dans un Dockerfile ?", a:"CMD définit la commande par défaut au démarrage du conteneur, mais elle peut être remplacée par l'utilisateur via docker run. ENTRYPOINT définit une commande fixe qui s'exécute toujours — elle ne peut pas être remplacée, seulement complétée par des arguments. Utilisez ENTRYPOINT pour l'exécutable principal et CMD pour ses arguments par défaut."},
+  {tag:'docker', tagLabel:'Dockerfile', q:"Pourquoi copie-t-on requirements.txt avant le code source dans un Dockerfile Python ?", a:"Pour exploiter le cache des layers Docker : si le code source change mais pas requirements.txt, Docker réutilise le layer d'installation des dépendances sans le refaire. En inversant l'ordre, toute modification du code forcerait une réinstallation complète des dépendances, rallongeant inutilement le build."},
+  {tag:'docker', tagLabel:'Réseau', q:"Comment les conteneurs d'un même réseau Docker Compose se trouvent-ils mutuellement ?", a:"Docker Compose crée un DNS interne : chaque service est accessible par son nom de service (ex: coordinator, worker1). Les conteneurs n'ont pas besoin de connaître les adresses IP — elles peuvent changer à chaque recréation. C'est pourquoi dans Citus, on enregistre les workers avec citus_add_node('worker1', 5432) plutôt qu'avec une IP."},
+  {tag:'docker', tagLabel:'Compose', q:"Quelle commande Docker Compose démarre tous les services en arrière-plan et quelle commande arrête tout et supprime les données ?", a:"docker compose up -d démarre tous les services en mode détaché (arrière-plan). docker compose down -v arrête et supprime les conteneurs, les réseaux créés par Compose, ET les volumes nommés (données perdues définitivement). Sans -v, docker compose down préserve les volumes."},
+  {tag:'docker', tagLabel:'Compose', q:"Quel est l'intérêt de Docker Compose pour simuler un cluster Citus ?", a:"Docker Compose permet de décrire tout le cluster (coordinateur + workers) dans un seul fichier YAML et de le démarrer en une commande (docker compose up -d). Sans Compose, il faudrait lancer chaque conteneur manuellement, gérer les réseaux et les volumes séparément. C'est aussi reproductible et portable : le même cluster peut être recréé à l'identique sur n'importe quelle machine."},
+  {tag:'docker', tagLabel:'Commandes', q:"Quelle est la différence entre docker stop et docker rm ?", a:"docker stop envoie un signal d'arrêt au conteneur (SIGTERM puis SIGKILL) — le conteneur s'arrête mais existe toujours (visible dans docker ps -a). docker rm supprime définitivement un conteneur arrêté. Pour supprimer un conteneur en cours d'exécution : docker rm -f."},
+  {tag:'docker', tagLabel:'Architecture', q:"Qu'est-ce que Docker Swarm et en quoi diffère-t-il de Docker Compose ?", a:"Docker Compose orchestre des conteneurs sur une seule machine. Docker Swarm est le mode d'orchestration natif Docker pour plusieurs machines physiques : un Swarm manager orchestre des Docker daemons sur plusieurs nœuds. Compose est pour le développement/test local, Swarm pour les déploiements multi-serveurs (concurrent de Kubernetes, mais plus simple)."},
+];
+
+window.QCM = [
+  {type:'single', q:"Quelle est la différence principale entre un conteneur Docker et une machine virtuelle ?", opts:["Un conteneur est plus sécurisé qu'une VM","Un conteneur partage le kernel de l'hôte et est plus léger et rapide, une VM virtualise un OS complet","Un conteneur ne peut pas accéder au réseau","Une VM démarre plus rapidement qu'un conteneur"], correct:[1], explain:"Un conteneur partage le kernel de l'OS hôte et n'embarque que les dépendances applicatives nécessaires — il démarre en secondes et consomme quelques Mo. Une VM embarque un OS complet via un hyperviseur — elle démarre en minutes et consomme plusieurs Go.", theme:"Concepts"},
+  {type:'tf', q:"Une image Docker peut être modifiée directement à l'exécution.", opts:["Vrai","Faux"], correct:[1], explain:"Faux. Une image est immuable (read-only). Quand un conteneur écrit des données, celles-ci vont dans un layer d'écriture propre au conteneur, pas dans l'image. Pour modifier une image, il faut créer un nouveau Dockerfile et reconstruire.", theme:"Concepts"},
+  {type:'single', q:"Quelle instruction Dockerfile copie des fichiers de la machine hôte vers le conteneur ?", opts:["FROM","RUN","COPY","ADD"], correct:[2], explain:"COPY copie des fichiers ou dossiers de l'hôte (contexte de build) vers le système de fichiers du conteneur. ADD fait la même chose mais supporte aussi les URLs et l'extraction automatique des archives tar — COPY est préféré pour la clarté.", theme:"Dockerfile"},
+  {type:'single', q:"Quelle commande liste tous les conteneurs, y compris ceux qui sont arrêtés ?", opts:["docker ps","docker ps -a","docker ls -all","docker container list"], correct:[1], explain:"docker ps affiche uniquement les conteneurs en cours d'exécution. docker ps -a (ou --all) affiche tous les conteneurs, qu'ils soient actifs, arrêtés ou en erreur.", theme:"Commandes"},
+  {type:'multi', q:"Parmi ces affirmations sur les volumes Docker, lesquelles sont vraies ?", opts:["Les données d'un conteneur sans volume sont perdues à sa suppression","Un volume survit à la suppression du conteneur","docker compose down -v supprime les volumes nommés","Les volumes sont stockés dans le conteneur lui-même"], correct:[0,1,2], explain:"Les volumes sont gérés par Docker séparément des conteneurs. Les données persistent après la suppression du conteneur. docker compose down -v les supprime explicitement. Les volumes ne sont PAS stockés dans le conteneur — c'est l'inverse : ils sont montés depuis l'extérieur.", theme:"Volumes"},
+  {type:'single', q:"Dans Docker Compose, comment les conteneurs du même réseau se trouvent-ils mutuellement ?", opts:["Via leurs adresses IP fixes","Via leur nom de service (DNS interne Docker)","Via des variables d'environnement","Via le port 8080 par défaut"], correct:[1], explain:"Docker Compose crée un DNS interne : chaque service est résolu par son nom de service. C'est pourquoi dans le cluster Citus, on enregistre les workers par nom (worker1, worker2) plutôt que par IP — les IPs peuvent changer à chaque recréation.", theme:"Réseau"},
+  {type:'tf', q:"docker compose down supprime les volumes nommés et toutes les données persistantes.", opts:["Vrai","Faux"], correct:[1], explain:"Faux. docker compose down supprime les conteneurs et les réseaux créés par Compose, mais préserve les volumes nommés. Pour supprimer les volumes, il faut ajouter le flag -v : docker compose down -v.", theme:"Compose"},
+  {type:'single', q:"Pourquoi Docker est-il utilisé pour simuler un cluster Citus dans le TP ?", opts:["Docker est plus rapide que PostgreSQL","Il permet de lancer plusieurs instances isolées (coordinateur + workers) sur une seule machine, de façon reproductible et sans installation complexe","Docker remplace Citus pour le sharding","Docker Compose est obligatoire pour utiliser Citus"], correct:[1], explain:"Docker Compose permet de simuler un vrai cluster distribué (coordinateur + workers) sur une seule machine physique en quelques secondes. Sans Docker, il faudrait plusieurs machines ou VMs, une installation manuelle de chaque instance PostgreSQL/Citus, et une configuration réseau complexe.", theme:"Docker & Citus"},
+  {type:'single', q:"Quelle commande permet d'exécuter une commande dans un conteneur en cours d'exécution ?", opts:["docker run","docker exec -it","docker attach","docker start"], correct:[1], explain:"docker exec -it nom_conteneur commande exécute une commande dans un conteneur déjà démarré. -i maintient stdin ouvert, -t alloue un terminal. Exemple : docker exec -it coordinator psql -U postgres.", theme:"Commandes"},
+  {type:'multi', q:"Parmi ces instructions Dockerfile, lesquelles créent un nouveau layer dans l'image ?", opts:["FROM","RUN","COPY","EXPOSE","WORKDIR"], correct:[0,1,2], explain:"Chaque instruction qui modifie le système de fichiers crée un nouveau layer : FROM (image de base), RUN (exécution de commandes), COPY/ADD (ajout de fichiers). EXPOSE et WORKDIR sont des métadonnées ou des changements de contexte sans impact sur le système de fichiers — ils ne créent pas de layer indépendant.", theme:"Dockerfile"},
+  {type:'tf', q:"Docker Swarm et Docker Compose ont le même rôle : orchestrer des conteneurs sur une seule machine.", opts:["Vrai","Faux"], correct:[1], explain:"Faux. Docker Compose orchestre des conteneurs sur une seule machine (développement/test). Docker Swarm orchestre des conteneurs sur plusieurs machines physiques en réseau (production multi-nœuds). Swarm est concurrent de Kubernetes, Compose est un outil local.", theme:"Compose vs Swarm"},
+];
+</script>
+<script src="app.js"></script>
+</body>
+</html>
