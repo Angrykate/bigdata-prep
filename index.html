@@ -12,13 +12,14 @@
 <header class="topbar">
   <div class="wrap">
     <div class="brand"><span class="dot"></span>bigdata-prep<small>&nbsp;· cluster revision kit</small></div>
-    <nav class="nav-links">
+    <nav class="nav-links" id="main-nav">
       <a href="hadoop.html">Hadoop</a>
       <a href="spark.html">Spark</a>
       <a href="spark-extensions.html">Extensions</a>
       <a href="postgres-distribue.html">Postgres&nbsp;distribué</a>
       <a href="docker.html">Docker</a>
     </nav>
+  <button class="hamburger" id="ham" aria-label="Menu" onclick="toggleNav(this)"><span></span><span></span><span></span></button>
   </div>
 </header>
 
@@ -41,8 +42,8 @@
 
   <section class="stat-strip">
     <div class="stat"><div class="n">5</div><div class="l">Modules</div></div>
-    <div class="stat"><div class="n">~140</div><div class="l">Fiches &amp; cartes</div></div>
-    <div class="stat"><div class="n">5</div><div class="l">Séries de QCM</div></div>
+    <div class="stat"><div class="n">~114</div><div class="l">Fiches &amp; cartes</div></div>
+    <div class="stat"><div class="n">59</div><div class="l">Questions QCM</div></div>
     <div class="stat"><div class="n">100%</div><div class="l">Hors présentations</div></div>
   </section>
 
@@ -132,5 +133,20 @@
   </div>
 </footer>
 
+<script>
+function toggleNav(btn){
+  btn.classList.toggle('open');
+  document.getElementById('main-nav').classList.toggle('open');
+}
+document.addEventListener('DOMContentLoaded',function(){
+  var links = document.querySelectorAll('#main-nav a');
+  links.forEach(function(a){
+    a.addEventListener('click',function(){
+      document.getElementById('main-nav').classList.remove('open');
+      document.getElementById('ham').classList.remove('open');
+    });
+  });
+});
+</script>
 </body>
 </html>

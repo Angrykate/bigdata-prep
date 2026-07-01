@@ -282,9 +282,164 @@ footer{ border-top:1px solid var(--line); margin-top:70px; padding:30px 0 50px; 
 footer .wrap{ display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; }
 footer p{ color:var(--text-faint); font-size:13px; margin:0; font-family:var(--mono); }
 
-/* ---------- responsive ---------- */
+/* ============================================================
+   RESPONSIVE — mobile-first, couverture complète
+   ============================================================ */
+
+/* --- Tablette (≤900px) --- */
+@media (max-width:900px){
+  .wrap{ padding:0 18px; }
+
+  /* topbar : logo + liens réduits */
+  .topbar .wrap{ height:56px; }
+  .nav-links a{ font-size:12.5px; padding:7px 9px; }
+  .brand small{ display:none; }
+
+  /* Hero */
+  .page-hero{ padding:36px 0 20px; }
+  h1.page-title{ font-size:clamp(24px,5vw,36px); }
+  .page-sub{ font-size:15px; }
+
+  /* Grilles → 2 colonnes max */
+  .module-grid{ grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; }
+  .card-grid{ grid-template-columns:1fr 1fr; }
+
+  /* Stat strip */
+  .stat-strip{ flex-wrap:wrap; }
+  .stat{ min-width:50%; border-bottom:1px solid var(--line); }
+  .stat:last-child{ border-right:none; }
+
+  /* QCM */
+  .qcm-head{ flex-direction:column; align-items:stretch; gap:10px; }
+  .qcm-card{ padding:22px 18px; }
+  .qcm-q{ font-size:16px; }
+
+  /* Tables : scroll horizontal */
+  .fiche-table{ display:block; overflow-x:auto; white-space:nowrap; }
+
+  /* Code blocks */
+  pre.code-block{ font-size:11.5px; }
+}
+
+/* --- Mobile (≤640px) --- */
 @media (max-width:640px){
+  .wrap{ padding:0 14px; }
+
+  /* ---- Topbar : hamburger ---- */
+  .topbar .wrap{ height:52px; justify-content:space-between; }
+  .brand{ font-size:13.5px; }
   .nav-links{ display:none; }
-  .qcm-card{ padding:20px; }
-  .qcm-head{ flex-direction:column; align-items:stretch; }
+  .nav-links.open{
+    display:flex; flex-direction:column; gap:4px;
+    position:fixed; top:52px; left:0; right:0; z-index:99;
+    background:rgba(10,14,22,.97);
+    backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line);
+    padding:12px 14px 16px;
+  }
+  .nav-links.open a{ font-size:14px; padding:10px 12px; border-radius:9px; }
+  .hamburger{
+    display:flex; flex-direction:column; justify-content:center; gap:5px;
+    width:36px; height:36px; cursor:pointer; padding:4px;
+    background:var(--panel); border:1px solid var(--line); border-radius:9px;
+  }
+  .hamburger span{
+    display:block; height:2px; background:var(--text-dim); border-radius:2px; transition:.2s;
+  }
+  .hamburger.open span:nth-child(1){ transform:translateY(7px) rotate(45deg); }
+  .hamburger.open span:nth-child(2){ opacity:0; }
+  .hamburger.open span:nth-child(3){ transform:translateY(-7px) rotate(-45deg); }
+
+  /* ---- Hero ---- */
+  .page-hero{ padding:28px 0 16px; }
+  h1.page-title{ font-size:clamp(22px,7vw,30px); line-height:1.12; }
+  .page-sub{ font-size:14px; }
+  .eyebrow{ flex-wrap:wrap; gap:8px; }
+
+  /* ---- Stat strip : 2 par ligne ---- */
+  .stat-strip{ flex-wrap:wrap; border-radius:10px; }
+  .stat{ flex:0 0 50%; border-right:none; border-bottom:1px solid var(--line); padding:14px 16px; }
+  .stat:nth-child(odd){ border-right:1px solid var(--line); }
+  .stat:last-child, .stat:nth-last-child(2):nth-child(odd){ border-bottom:none; }
+  .stat .n{ font-size:22px; }
+
+  /* ---- Module cards : pleine largeur ---- */
+  .module-grid{ grid-template-columns:1fr; gap:12px; margin:20px 0; }
+  .module-card{ padding:18px; }
+  .module-card h3{ font-size:17px; }
+  .module-card p{ font-size:13.5px; }
+
+  /* ---- Tabs ---- */
+  .tabs{ gap:4px; margin:24px 0 16px; overflow-x:auto; flex-wrap:nowrap; padding-bottom:2px; }
+  .tab-btn{ font-size:12.5px; padding:10px 12px; white-space:nowrap; }
+
+  /* ---- Fiches ---- */
+  .card-grid{ grid-template-columns:1fr; gap:10px; }
+  .def-card{ padding:14px 16px; }
+  .def-card h4{ font-size:14px; }
+  .def-card p, .def-card li{ font-size:13.5px; }
+  .def-card.wide{ grid-column:1; }
+  .fiche-section h2{ font-size:18px; }
+  .fiche-section .desc{ font-size:13px; }
+
+  /* ---- Tables : scroll horizontal ---- */
+  .fiche-table{ display:block; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .fiche-table th, .fiche-table td{ font-size:12.5px; padding:8px 10px; white-space:nowrap; }
+
+  /* ---- Code blocks ---- */
+  pre.code-block{
+    font-size:11px;
+    padding:12px 13px;
+    border-radius:8px;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  /* ---- Warn box ---- */
+  .warn-box{ font-size:13px; padding:12px 14px; }
+
+  /* ---- Flashcards ---- */
+  .fc-toolbar{ flex-direction:column; align-items:flex-start; gap:10px; }
+  .flashcard{ max-width:100%; }
+  .fc-face{ padding:24px 18px; min-height:220px; }
+  .fc-face p{ font-size:15px; }
+  .fc-face.back p{ font-size:13.5px; }
+  .fc-nav{ gap:8px; }
+  .fc-btn{ font-size:12px; padding:8px 11px; }
+  .count{ font-size:12px; }
+
+  /* ---- QCM ---- */
+  .qcm-head{ flex-direction:column; align-items:stretch; gap:10px; }
+  .qcm-card{ padding:18px 14px; border-radius:12px; }
+  .qcm-kind{ font-size:10.5px; }
+  .qcm-q{ font-size:15px; margin-bottom:16px; }
+  .qcm-opt{ font-size:13.5px; padding:11px 13px; border-radius:9px; }
+  .qcm-opts.tf-row{ flex-direction:row; }
+  .qcm-explain{ font-size:13px; padding:12px 13px; }
+  .qcm-next{ font-size:13px; padding:10px 16px; }
+  .qcm-score-pill{ font-size:12px; padding:7px 12px; }
+  .qcm-result{ padding:32px 16px; }
+  .qcm-result .ring{ width:100px; height:100px; font-size:22px; }
+  .qcm-result h3{ font-size:18px; }
+  .qcm-meter-label{ font-size:11px; }
+
+  /* ---- Footer ---- */
+  footer{ padding:20px 0 36px; }
+  footer .wrap{ flex-direction:column; align-items:flex-start; gap:6px; }
+
+  /* ---- Mini badges ---- */
+  .badge-row{ gap:5px; }
+  .mini-badge{ font-size:10px; padding:2px 6px; }
+
+  /* ---- Chip ---- */
+  .chip{ font-size:10.5px; padding:4px 9px; }
+}
+
+/* --- Très petit mobile (≤380px) --- */
+@media (max-width:380px){
+  .wrap{ padding:0 10px; }
+  h1.page-title{ font-size:20px; }
+  .qcm-opts.tf-row{ flex-direction:column; }
+  pre.code-block{ font-size:10px; }
+  .fc-face p{ font-size:14px; }
 }

@@ -13,7 +13,7 @@
 <header class="topbar">
   <div class="wrap">
     <div class="brand"><span class="dot" style="background:var(--ext)"></span>bigdata-prep</div>
-    <nav class="nav-links">
+    <nav class="nav-links" id="main-nav">
       <a href="index.html">Accueil</a>
       <a href="hadoop.html">Hadoop</a>
       <a href="spark.html">Spark</a>
@@ -21,6 +21,7 @@
       <a href="postgres-distribue.html">Postgres&nbsp;distribué</a>
       <a href="docker.html">Docker</a>
     </nav>
+  <button class="hamburger" id="ham" aria-label="Menu" onclick="toggleNav(this)"><span></span><span></span><span></span></button>
   </div>
 </header>
 
@@ -335,5 +336,20 @@ window.QCM = [
 ];
 </script>
 <script src="app.js"></script>
+<script>
+function toggleNav(btn){
+  btn.classList.toggle('open');
+  document.getElementById('main-nav').classList.toggle('open');
+}
+document.addEventListener('DOMContentLoaded',function(){
+  var links = document.querySelectorAll('#main-nav a');
+  links.forEach(function(a){
+    a.addEventListener('click',function(){
+      document.getElementById('main-nav').classList.remove('open');
+      document.getElementById('ham').classList.remove('open');
+    });
+  });
+});
+</script>
 </body>
 </html>
