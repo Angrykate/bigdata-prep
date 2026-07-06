@@ -28,9 +28,8 @@
 <main class="wrap">
   <section class="page-hero">
     <span class="chip ext">Module 03 · Extensions</span>
-    <h1 class="page-title" style="margin-top:14px;">Extensions Spark &amp; Pig</h1>
-    <p class="page-sub">Spark ML pour le machine learning distribué à grande échelle,
-    et Apache Pig pour les transformations ETL via un langage de script de haut niveau (Pig Latin).</p>
+    <h1 class="page-title" style="margin-top:14px;">Extensions Spark, Hive &amp; Pig</h1>
+    <p class="page-sub">Spark ML pour le machine learning distribué, Apache Hive pour l'analytique SQL sur Hadoop (data warehouse, HiveQL, Metastore), et Apache Pig pour les pipelines ETL via Pig Latin.</p>
   </section>
 
   <div class="tabs">
@@ -150,6 +149,131 @@ print(<span class="s">f"AUC : {auc:.3f}"</span>)</pre>
           <p style="color:var(--text-dim);font-size:14px;">StringIndexer.fit() → VectorAssembler.transform() → StandardScaler.fit() → LogisticRegression.fit()</p>
           <p style="margin-top:10px;">Lors du <code>transform()</code> sur les données de test :</p>
           <p style="color:var(--text-dim);font-size:14px;">Chaque étape applique ses paramètres appris sur les nouvelles données, sans ré-entraînement.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ──────────────── APACHE HIVE ──────────────── -->
+    <div class="fiche-section">
+      <h2>Apache Hive</h2>
+      <p class="desc">Data warehouse distribué construit sur Hadoop, permettant d'interroger des données stockées dans HDFS via un langage SQL familier : HiveQL.</p>
+      <div class="card-grid">
+        <div class="def-card wide">
+          <h4>Définition</h4>
+          <p>Apache Hive est un système de data warehouse qui fournit une interface SQL (appelée <b>HiveQL</b>) pour interroger et analyser de grandes quantités de données stockées dans HDFS. Il a été initialement développé par Facebook, puis cédé à la fondation Apache. Son idée centrale est simple : permettre aux analystes et data scientists qui connaissent le SQL de travailler sur du Big Data <b>sans apprendre MapReduce ou Spark</b>. En coulisses, Hive compile les requêtes HiveQL en jobs MapReduce ou Spark qui s'exécutent sur le cluster.</p>
+          <div class="badge-row">
+            <span class="mini-badge">Data warehouse</span>
+            <span class="mini-badge">HiveQL (SQL)</span>
+            <span class="mini-badge">Compile en MapReduce/Spark</span>
+            <span class="mini-badge">Schema-on-read</span>
+            <span class="mini-badge">Analytique batch</span>
+          </div>
+        </div>
+
+        <div class="def-card">
+          <h4>Architecture interne</h4>
+          <table class="fiche-table">
+            <tr><th>Composant</th><th>Rôle</th></tr>
+            <tr><td><b>Driver</b></td><td>Reçoit la requête HiveQL, pilote l'ensemble du processus</td></tr>
+            <tr><td><b>Compiler</b></td><td>Parse et analyse la requête, génère le plan d'exécution (DAG de tâches)</td></tr>
+            <tr><td><b>Metastore</b></td><td>Base de données (MySQL par défaut) stockant les métadonnées : schémas des tables, localisation HDFS, partitions, types de colonnes</td></tr>
+            <tr><td><b>Execution Engine</b></td><td>Exécute le plan généré via MapReduce, Tez ou Spark</td></tr>
+          </table>
+        </div>
+
+        <div class="def-card">
+          <h4>Le Metastore — clé de voûte de Hive</h4>
+          <p>Le Metastore est la base de données centrale qui stocke <b>toutes les métadonnées</b> des tables Hive : nom des colonnes, types, emplacement des fichiers dans HDFS, liste des partitions, format de stockage (ORC, Parquet, CSV...). Sans le Metastore, Hive ne sait pas où sont les données ni comment les lire. Il est partageable entre plusieurs instances Hive et d'autres outils (Spark peut lire directement le Metastore Hive).</p>
+        </div>
+
+        <div class="def-card wide">
+          <h4>Schema-on-read — le principe fondamental</h4>
+          <p>C'est la différence philosophique majeure entre Hive et un SGBD classique. Dans un SGBD classique, le schéma est vérifié à l'<b>écriture</b> (<i>schema-on-write</i>) : impossible d'insérer une donnée qui ne correspond pas au type de la colonne. Hive applique le schéma à la <b>lecture</b> (<i>schema-on-read</i>) : les données sont stockées telles quelles dans HDFS (souvent des fichiers texte ou CSV), et Hive applique le schéma seulement quand on interroge les données. Conséquence : le chargement est très rapide (pas de validation), mais si les données sont mal formatées, les erreurs apparaissent à la requête, pas à l'import.</p>
+        </div>
+
+        <div class="def-card">
+          <h4>Tables Managed vs External</h4>
+          <table class="fiche-table">
+            <tr><th></th><th>Managed (interne)</th><th>External (externe)</th></tr>
+            <tr><td>Données gérées par</td><td>Hive</td><td>L'utilisateur</td></tr>
+            <tr><td>Emplacement HDFS</td><td>Répertoire Hive par défaut</td><td>Répertoire au choix</td></tr>
+            <tr><td>DROP TABLE</td><td>Supprime les données ET les métadonnées</td><td>Supprime uniquement les métadonnées — les données HDFS sont préservées</td></tr>
+            <tr><td>Cas d'usage</td><td>Données propres à Hive</td><td>Données partagées avec d'autres outils (Spark, Pig...)</td></tr>
+          </table>
+          <div class="warn-box" style="margin-top:12px;">
+            <span>⚠️</span>
+            <span><b>Piège classique :</b> DROP TABLE sur une table Managed supprime physiquement les données dans HDFS. Toujours utiliser des tables External pour les données importantes partagées avec d'autres systèmes.</span>
+          </div>
+        </div>
+
+        <div class="def-card">
+          <h4>Partitionnement dans Hive</h4>
+          <p>Hive supporte le <b>partitionnement des tables</b> sur une ou plusieurs colonnes. Chaque valeur distincte crée un sous-répertoire dans HDFS. Lors d'une requête filtrée sur la colonne de partition, Hive ne lit que les sous-répertoires concernés — c'est le <b>partition pruning</b>, identique en concept à ce qu'on a vu dans PostgreSQL.</p>
+          <pre class="code-block"><span class="k">CREATE TABLE</span> commandes (
+  id INT, montant DOUBLE
+) <span class="k">PARTITIONED BY</span> (pays STRING);
+
+<span class="c">-- Requête optimisée : ne lit que le sous-dossier /pays=Togo/</span>
+<span class="k">SELECT</span> * <span class="k">FROM</span> commandes <span class="k">WHERE</span> pays = <span class="s">'Togo'</span>;</pre>
+        </div>
+
+        <div class="def-card">
+          <h4>Formats de fichiers supportés</h4>
+          <table class="fiche-table">
+            <tr><th>Format</th><th>Type</th><th>Usage recommandé</th></tr>
+            <tr><td><b>TextFile</b></td><td>Ligne par ligne (CSV)</td><td>Import initial, debug</td></tr>
+            <tr><td><b>ORC</b></td><td>Colonnaire + compressé</td><td>Production Hive — très rapide</td></tr>
+            <tr><td><b>Parquet</b></td><td>Colonnaire + compressé</td><td>Interopérabilité avec Spark</td></tr>
+            <tr><td><b>Avro</b></td><td>Ligne, avec schéma</td><td>Streaming (Kafka)</td></tr>
+          </table>
+          <p style="margin-top:8px;font-size:13.5px;color:var(--text-dim);">ORC est le format natif et recommandé de Hive pour la production. Parquet est préféré quand les données sont partagées avec Spark.</p>
+        </div>
+
+        <div class="def-card wide">
+          <h4>HiveQL — exemples essentiels</h4>
+          <pre class="code-block"><span class="c">-- Créer une table externe partitionnée en ORC</span>
+<span class="k">CREATE EXTERNAL TABLE</span> ventes (
+  produit STRING,
+  montant DOUBLE,
+  date_vente DATE
+)
+<span class="k">PARTITIONED BY</span> (pays STRING)
+<span class="k">STORED AS</span> ORC
+<span class="k">LOCATION</span> <span class="s">'/data/ventes'</span>;
+
+<span class="c">-- Charger des données (depuis HDFS vers la partition)</span>
+<span class="k">LOAD DATA INPATH</span> <span class="s">'/tmp/ventes_togo.csv'</span>
+<span class="k">INTO TABLE</span> ventes <span class="k">PARTITION</span> (pays=<span class="s">'Togo'</span>);
+
+<span class="c">-- Requête analytique standard</span>
+<span class="k">SELECT</span> pays, SUM(montant) <span class="k">AS</span> ca_total
+<span class="k">FROM</span> ventes
+<span class="k">WHERE</span> date_vente >= <span class="s">'2026-01-01'</span>
+<span class="k">GROUP BY</span> pays
+<span class="k">ORDER BY</span> ca_total <span class="k">DESC</span>;
+
+<span class="c">-- Voir les partitions d'une table</span>
+<span class="k">SHOW PARTITIONS</span> ventes;</pre>
+        </div>
+
+        <div class="def-card wide">
+          <h4>Hive, Pig et Spark SQL — comparatif complet</h4>
+          <table class="fiche-table">
+            <tr><th>Critère</th><th>Apache Hive</th><th>Apache Pig</th><th>Spark SQL</th></tr>
+            <tr><td>Langage</td><td>HiveQL (SQL)</td><td>Pig Latin (script)</td><td>SQL standard</td></tr>
+            <tr><td>Public cible</td><td>Analystes SQL</td><td>Développeurs ETL</td><td>Data engineers / analystes</td></tr>
+            <tr><td>Schéma</td><td>Obligatoire (Metastore)</td><td>Facultatif</td><td>Obligatoire ou inféré</td></tr>
+            <tr><td>Exécution</td><td>MapReduce / Tez / Spark</td><td>MapReduce</td><td>Spark (en mémoire)</td></tr>
+            <tr><td>Vitesse</td><td>Lente à moyenne</td><td>Lente (MapReduce)</td><td>Rapide (mémoire)</td></tr>
+            <tr><td>Schema-on-read</td><td>Oui</td><td>Oui</td><td>Non (schéma à la lecture vérifiée)</td></tr>
+            <tr><td>Temps réel</td><td>Non</td><td>Non</td><td>Oui (Structured Streaming)</td></tr>
+            <tr><td>Cas d'usage principal</td><td>Data warehouse, reporting analytique</td><td>Pipelines ETL complexes</td><td>Traitement rapide, ML, pipelines modernes</td></tr>
+          </table>
+        </div>
+
+        <div class="def-card">
+          <h4>Hive aujourd'hui</h4>
+          <p>Hive reste très présent dans les grandes entreprises (Yahoo, Facebook, Netflix) pour les pipelines analytiques sur des données historiques massives. Cependant Spark SQL, qui peut directement lire le Metastore Hive, tend à le remplacer pour les nouveaux développements car il est bien plus rapide (traitement en mémoire). Hive garde une place forte dans les data warehouses legacy et les environnements Hadoop établis.</p>
         </div>
       </div>
     </div>
@@ -313,6 +437,13 @@ window.FLASHCARDS = [
   {tag:'ext', tagLabel:'Spark ML', q:"À quoi sert VectorAssembler dans un pipeline Spark ML ?", a:"VectorAssembler est un Transformer qui assemble plusieurs colonnes numériques en un seul vecteur dense dans une colonne 'features'. C'est une étape obligatoire car tous les algorithmes Spark ML attendent leurs données d'entrée sous forme d'un unique vecteur dense."},
   {tag:'ext', tagLabel:'Spark ML', q:"Décrivez l'intérêt d'utiliser un Pipeline Spark ML.", a:"Un Pipeline enchaîne des Transformers et des Estimators dans un ordre défini. Avantages : un seul appel fit() entraîne toute la chaîne (prétraitement + modèle), le modèle final est reproductible et facilement sérialisable, il évite les fuites de données entre train et test car tout est géré ensemble."},
   {tag:'ext', tagLabel:'Spark ML', q:"Quels sont les 3 façons de définir un schéma dans Spark ? (rappel TP)", a:"1. inferSchema=True : automatique mais lent et peu fiable. 2. StructType avec StructField : précis et recommandé en production. 3. DDL string comme 'id INT, nom STRING' : concis et lisible. En production, préférer 2 ou 3."},
+  {tag:'ext', tagLabel:'Hive', q:"Qu'est-ce qu'Apache Hive et quel est son principe fondamental ?", a:"Hive est un data warehouse distribué sur Hadoop qui fournit une interface SQL (HiveQL) pour interroger des données dans HDFS. Son principe fondamental est le schema-on-read : les données sont stockées telles quelles dans HDFS, et le schéma n'est appliqué qu'à la lecture — le chargement est donc très rapide mais les erreurs de format apparaissent à la requête, pas à l'import."},
+  {tag:'ext', tagLabel:'Hive', q:"Quel est le rôle du Metastore dans Hive et pourquoi est-il critique ?", a:"Le Metastore est une base de données (MySQL par défaut) qui stocke toutes les métadonnées des tables Hive : noms et types des colonnes, emplacement des données dans HDFS, liste des partitions, format de stockage. Sans le Metastore, Hive ne sait ni où sont les données ni comment les interpréter. Il est partageable avec d'autres outils comme Spark, qui peut lire directement le Metastore Hive."},
+  {tag:'ext', tagLabel:'Hive', q:"Quelle est la différence entre une table Managed et une table External dans Hive ?", a:"Table Managed (interne) : Hive gère les données dans son répertoire HDFS par défaut. Un DROP TABLE supprime à la fois les métadonnées ET les données physiques dans HDFS. Table External : les données restent dans un répertoire HDFS au choix. Un DROP TABLE ne supprime que les métadonnées — les données HDFS sont préservées. Les tables External sont recommandées pour les données partagées avec d'autres outils."},
+  {tag:'ext', tagLabel:'Hive', q:"Qu'est-ce que le schema-on-read et en quoi s'oppose-t-il au schema-on-write ?", a:"Schema-on-write (SGBD classiques) : le schéma est vérifié à l'insertion — impossible d'insérer une donnée mal typée. Schema-on-read (Hive) : les données sont stockées brutes dans HDFS sans validation. Le schéma est appliqué uniquement lors de la lecture. Avantage : chargement très rapide, flexibilité. Inconvénient : les erreurs de format n'apparaissent qu'à la requête, pas à l'import."},
+  {tag:'ext', tagLabel:'Hive', q:"Comparez les formats ORC et Parquet dans le contexte Hive.", a:"ORC (Optimized Row Columnar) est le format natif de Hive : colonnaire, très compressé, optimisé pour les requêtes Hive analytiques. Recommandé pour les tables purement Hive. Parquet est aussi colonnaire et compressé, mais mieux supporté par Spark et d'autres outils de l'écosystème. À préférer quand les données sont partagées entre Hive et Spark. Les deux sont bien meilleurs que TextFile pour la production."},
+  {tag:'ext', tagLabel:'Hive', q:"Comment fonctionne le partitionnement dans Hive et quel avantage procure-t-il ?", a:"On déclare les colonnes de partition dans le CREATE TABLE avec PARTITIONED BY. Chaque valeur distincte crée un sous-répertoire dans HDFS (ex: /pays=Togo/, /pays=Mali/). Lors d'une requête filtrée sur la colonne de partition, Hive ne lit que les sous-répertoires concernés (partition pruning), évitant de scanner toute la table. C'est le même principe que dans PostgreSQL — crucial pour les performances sur de grandes tables."},
+  {tag:'ext', tagLabel:'Hive', q:"Comparez Hive, Pig et Spark SQL sur le public cible, le langage et la vitesse.", a:"Hive : analystes SQL, HiveQL (SQL), vitesse moyenne (MapReduce/Tez), data warehouse et reporting. Pig : développeurs ETL, Pig Latin (script de flux), lent (MapReduce), transformations complexes. Spark SQL : data engineers et analystes, SQL standard, rapide (traitement en mémoire), pipelines modernes, ML, temps réel via Structured Streaming. En pratique, Spark SQL tend à remplacer les deux dans les nouveaux projets."},
   {tag:'ext', tagLabel:'Pig', q:"Qu'est-ce qu'Apache Pig et en quoi se distingue-t-il de Hive ?", a:"Pig est une plateforme ETL de haut niveau dont le langage (Pig Latin) compile en jobs MapReduce. Il s'adresse aux développeurs pour des transformations complexes, avec un schéma facultatif. Hive utilise HiveQL (SQL), s'adresse aux analystes, avec un schéma obligatoire et un focus sur le reporting."},
   {tag:'ext', tagLabel:'Pig', q:"Expliquez le comportement lazy d'Apache Pig.", a:"Comme Spark, Pig est lazy : les instructions LOAD, FILTER, FOREACH, GROUP ne déclenchent aucun calcul immédiat. L'exécution (compilation en MapReduce) n'est déclenchée que par DUMP (affichage à l'écran) ou STORE (écriture dans HDFS)."},
   {tag:'ext', tagLabel:'Pig', q:"À quoi sert la commande FLATTEN en Pig Latin ?", a:"FLATTEN décompresse une structure imbriquée (bag ou tuple) en lignes individuelles. Elle est indispensable après TOKENIZE (qui retourne un bag de mots) ou après GROUP (qui retourne des bags de tuples) pour travailler sur chaque élément séparément."},
@@ -326,6 +457,11 @@ window.QCM = [
   {type:'tf', q:"Un Pipeline Spark ML peut contenir à la fois des Transformers et des Estimators.", opts:["Vrai","Faux"], correct:[0], explain:"Vrai. C'est la force du Pipeline : il enchaîne des Transformers (StringIndexer, VectorAssembler, StandardScaler) et des Estimators (LogisticRegression, RandomForest) dans un ordre défini. Un seul fit() sur le Pipeline entraîne tous les Estimators en séquence.", theme:"Spark ML"},
   {type:'single', q:"Quel composant Spark ML est indispensable pour préparer les données avant un algorithme de classification ?", opts:["CrossValidator","VectorAssembler","GraphX","Structured Streaming"], correct:[1], explain:"Tous les algorithmes Spark ML attendent leurs données sous forme d'un unique vecteur dense dans une colonne 'features'. VectorAssembler assemble plusieurs colonnes numériques en ce vecteur.", theme:"Spark ML"},
   {type:'single', q:"Principale raison de choisir Spark ML plutôt que scikit-learn en production Big Data ?", opts:["Spark ML a plus d'algorithmes disponibles","Spark ML distribue le calcul sur un cluster, permettant de traiter des volumes impossibles sur une machine unique","Spark ML est plus simple à utiliser","Spark ML fonctionne sans cluster"], correct:[1], explain:"scikit-learn s'exécute sur une seule machine et est limité par la RAM disponible. Spark ML distribue les données et le calcul sur un cluster, permettant de traiter des pétaoctets de données avec un entraînement parallélisé.", theme:"Spark ML vs scikit-learn"},
+  {type:'single', q:"Qu'est-ce que le schema-on-read dans Hive ?", opts:["Le schéma est vérifié à l'écriture comme dans un SGBD classique","Le schéma est appliqué uniquement lors de la lecture — les données sont stockées brutes dans HDFS","Hive n'utilise jamais de schéma","Le schéma est généré automatiquement à partir des données"], correct:[1], explain:"Schema-on-read signifie que Hive stocke les données telles quelles dans HDFS sans validation à l'import. Le schéma est appliqué seulement quand une requête lit les données. Avantage : chargement très rapide. Inconvénient : les erreurs de format n'apparaissent qu'à la requête.", theme:"Hive"},
+  {type:'single', q:"Que se passe-t-il quand on exécute DROP TABLE sur une table Managed Hive ?", opts:["Seules les métadonnées sont supprimées, les données HDFS sont préservées","Les métadonnées ET les données physiques dans HDFS sont supprimées","Rien — il faut d'abord détacher la table","La table est marquée comme archivée"], correct:[1], explain:"Sur une table Managed (interne), DROP TABLE supprime à la fois les métadonnées du Metastore ET les fichiers de données dans HDFS — perte définitive. C'est pourquoi on utilise des tables External pour les données importantes : DROP TABLE ne supprime alors que les métadonnées, les données HDFS sont préservées.", theme:"Hive"},
+  {type:'single', q:"Quel composant Hive stocke les métadonnées des tables (schémas, partitions, emplacement HDFS) ?", opts:["Le Driver","L'Execution Engine","Le Metastore","Le Compiler"], correct:[2], explain:"Le Metastore est la base de données centrale (MySQL par défaut) qui stocke toutes les métadonnées : noms et types des colonnes, emplacement des données dans HDFS, liste des partitions, format de stockage. Sans le Metastore, Hive ne peut pas fonctionner.", theme:"Hive — Architecture"},
+  {type:'multi', q:"Parmi ces affirmations sur Hive, lesquelles sont vraies ?", opts:["HiveQL est un langage SQL qui compile en jobs MapReduce ou Spark","Hive vérifie le schéma à l'écriture (schema-on-write)","Le Metastore peut être partagé avec Spark","Les tables External préservent les données HDFS lors d'un DROP TABLE"], correct:[0,2,3], explain:"HiveQL compile bien en MapReduce ou Spark. Hive utilise schema-on-read (pas schema-on-write). Le Metastore Hive est partageable avec Spark — Spark peut lire directement les tables Hive via le Metastore. Sur une table External, DROP TABLE ne supprime que les métadonnées.", theme:"Hive"},
+  {type:'single', q:"Quel format de fichier est recommandé pour les tables Hive partagées avec Spark ?", opts:["TextFile (CSV)","ORC","Parquet","Avro"], correct:[2], explain:"Parquet est le format colonnaire compressé le mieux supporté par Spark. Quand les données sont partagées entre Hive et Spark, Parquet assure la meilleure interopérabilité. ORC est le format natif optimisé de Hive mais moins bien intégré dans Spark. TextFile est réservé à l'import initial ou au debug.", theme:"Hive — Formats"},
   {type:'single', q:"En Pig Latin, quelle commande déclenche réellement l'exécution des transformations ?", opts:["LOAD","FILTER","FOREACH","DUMP ou STORE"], correct:[3], explain:"Pig est lazy : LOAD, FILTER, FOREACH, GROUP construisent un plan logique sans rien exécuter. Seuls DUMP (affichage) et STORE (écriture dans HDFS) déclenchent l'exécution réelle (compilation en jobs MapReduce).", theme:"Pig"},
   {type:'tf', q:"Pig Latin est un langage SQL qui s'exécute directement sur HDFS.", opts:["Vrai","Faux"], correct:[1], explain:"Faux sur deux points : Pig Latin n'est pas du SQL mais un langage de flux de données (dataflow language) avec une syntaxe propre (LOAD, FOREACH, GROUP...). Et il ne s'exécute pas directement : il compile en jobs MapReduce avant de s'exécuter sur le cluster Hadoop.", theme:"Pig"},
   {type:'single', q:"En Pig Latin, à quoi sert FLATTEN ?", opts:["Mettre les données en minuscules","Décompresser une structure imbriquée (bag/tuple) en lignes individuelles","Joindre deux relations","Supprimer les lignes dupliquées"], correct:[1], explain:"FLATTEN est indispensable après des opérations qui produisent des structures imbriquées (bags) comme TOKENIZE ou GROUP. Il 'déplie' ces structures pour obtenir une ligne par élément.", theme:"Pig"},
